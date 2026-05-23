@@ -62,7 +62,7 @@ const milestones = [
     border: "rgba(255,107,43,0.28)",
     headline: "Win Trackshift 2025 — AK 0121 Is Born",
     body:
-      "November 2025. Two builders enter the Trackshift national production-systems challenge — and walk out champions. The win isn't just a trophy; it's a mandate. Arihant and Kundan incorporate AK 0121 the same week, channelling the Trackshift energy into the foundation of a done-for-you tech agency. The clock starts ticking.",
+      "",
     tag: "Origin",
   },
   {
@@ -73,7 +73,7 @@ const milestones = [
     border: "rgba(74,222,128,0.2)",
     headline: "First Client Secured",
     body:
-      "December 2025. The ink is barely dry on the agency when AK 0121 lands its first paying client — a civic-tech operator needing an emergency ambulance dispatch system. Within six weeks of kickoff the platform is live, cutting median response time by 60% in pilot regions. First client. First production deployment. First proof.",
+      "",
     tag: "First Client",
   },
   {
@@ -84,7 +84,7 @@ const milestones = [
     border: "rgba(56,189,248,0.2)",
     headline: "15 Projects Surpassed",
     body:
-      "February 2026. Three months into operations AK 0121 clears 15 production deployments. The portfolio spans AI fake-news detection (91% accuracy across 2M+ articles), the Foodbridge supply-chain platform connecting 200+ farmers, and a 500 GB zero-loss secure-transfer logistics protocol. The pipeline is full. The agency is real.",
+      "",
     tag: "Milestone",
   },
   {
@@ -95,7 +95,7 @@ const milestones = [
     border: "rgba(167,139,250,0.22)",
     headline: "20+ Projects — Still Counting",
     body:
-      "March 2026. AK 0121 crosses 20 live deployments. Enterprise CRM suites (Orbinex, PASS) serving 500+ daily users, a multi-modal AI pipeline, and a growing waitlist of clients. 100% retention rate. Zero failed launches. The Done-For-You model is validated at scale — and the agency is only getting started.",
+      "",
     tag: "20+ Projects",
     isCurrent: true,
   },
