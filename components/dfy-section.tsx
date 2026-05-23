@@ -150,7 +150,7 @@ export function DfySection() {
         </div>
 
         {/* Comparison table-style bento */}
-        <div className="grid grid-cols-1 gap-2 mb-12">
+        <div className="grid grid-cols-1 gap-5 md:gap-2 mb-12">
           {/* Column headers */}
           <div className="grid grid-cols-12 gap-2 px-2 mb-1 hidden md:grid">
             <div className="col-span-4" />
@@ -207,7 +207,7 @@ function ComparisonRow({
   return (
     <div
       ref={ref}
-      className="grid grid-cols-1 md:grid-cols-12 gap-2 items-stretch"
+      className="flex flex-col p-5 md:p-0 rounded-2xl md:rounded-none border border-white/[0.04] md:border-0 bg-white/[0.01] md:bg-transparent gap-3 md:grid md:grid-cols-12 md:gap-2 md:items-stretch"
       style={{
         opacity: inView ? 1 : 0,
         transform: inView ? "translateY(0)" : "translateY(16px)",
@@ -216,14 +216,10 @@ function ComparisonRow({
     >
       {/* Topic */}
       <div
-        className="md:col-span-4 px-5 py-4 rounded-xl flex items-center"
-        style={{
-          background: "rgba(255,255,255,0.03)",
-          border: "1px solid rgba(255,255,255,0.07)",
-        }}
+        className="md:col-span-4 px-0 py-0 md:px-5 md:py-4 rounded-xl flex items-center bg-transparent md:bg-white/[0.03] border-0 md:border md:border-white/[0.07]"
       >
         <span
-          className="text-sm font-semibold"
+          className="text-base font-semibold md:text-sm md:font-semibold"
           style={{ color: "var(--foreground)" }}
         >
           {row.topic}
@@ -232,38 +228,48 @@ function ComparisonRow({
 
       {/* DFY */}
       <div
-        className="md:col-span-4 px-5 py-4 rounded-xl flex items-center gap-3"
+        className="md:col-span-4 px-4 py-3.5 md:px-5 md:py-4 rounded-xl flex flex-col items-start gap-1.5 md:gap-0"
         style={{
           background: "rgba(255,107,43,0.07)",
           border: "1px solid rgba(255,107,43,0.18)",
         }}
       >
-        <CheckCircle2
-          size={16}
-          className="shrink-0"
-          style={{ color: "var(--primary)" }}
-        />
-        <span className="text-sm leading-relaxed" style={{ color: "var(--foreground)" }}>
-          {row.dfy}
+        <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[var(--primary)] mb-0.5 md:hidden">
+          AK 0121 DFY
         </span>
+        <div className="flex items-center gap-2.5 md:gap-3 w-full">
+          <CheckCircle2
+            size={16}
+            className="shrink-0"
+            style={{ color: "var(--primary)" }}
+          />
+          <span className="text-sm leading-relaxed" style={{ color: "var(--foreground)" }}>
+            {row.dfy}
+          </span>
+        </div>
       </div>
 
       {/* DIY */}
       <div
-        className="md:col-span-4 px-5 py-4 rounded-xl flex items-center gap-3"
+        className="md:col-span-4 px-4 py-3.5 md:px-5 md:py-4 rounded-xl flex flex-col items-start gap-1.5 md:gap-0"
         style={{
           background: "rgba(255,255,255,0.02)",
           border: "1px solid rgba(255,255,255,0.06)",
         }}
       >
-        <XCircle
-          size={16}
-          className="shrink-0"
-          style={{ color: "rgba(239,68,68,0.7)" }}
-        />
-        <span className="text-sm leading-relaxed" style={{ color: "var(--muted-foreground)" }}>
-          {row.diy}
+        <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground/70 mb-0.5 md:hidden">
+          Build on Your Own
         </span>
+        <div className="flex items-center gap-2.5 md:gap-3 w-full">
+          <XCircle
+            size={16}
+            className="shrink-0"
+            style={{ color: "rgba(239,68,68,0.7)" }}
+          />
+          <span className="text-sm leading-relaxed" style={{ color: "var(--muted-foreground)" }}>
+            {row.diy}
+          </span>
+        </div>
       </div>
     </div>
   )
