@@ -201,10 +201,11 @@ function Footer({ content }: { content?: any }) {
         <div className="flex items-center gap-3">
           {socialUrls.map(({ label, href, icon }: any) => {
             const Icon = iconMap[icon || "Mail"] || Mail
+            const finalHref = icon === "Mail" && href && !href.startsWith("mailto:") ? `mailto:${href}` : href
             return (
               <a
                 key={label}
-                href={href}
+                href={finalHref}
                 aria-label={label}
                 className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200"
                 style={{ background: "rgba(255,255,255,0.05)", color: "var(--muted-foreground)" }}
