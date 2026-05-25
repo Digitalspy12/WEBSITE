@@ -333,7 +333,7 @@ export function ProjectGallery({ content }: { content?: any }) {
 
   return (
     <section
-      id="projects"
+      id="work"
       ref={secRef as React.RefObject<HTMLDivElement>}
       className="py-24 relative overflow-hidden"
       style={{ background: "var(--background)" }}

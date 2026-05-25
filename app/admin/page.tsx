@@ -14,7 +14,6 @@ import {
   Trash2,
   Layout,
   Rocket,
-  Grid,
   FolderGit2,
   Mail,
   CheckCircle,
@@ -24,13 +23,11 @@ import {
   MessageSquare,
 } from 'lucide-react'
 
-// Tab definitions
 const TABS = [
   { id: 'navbar', label: 'Navbar & Brand', Icon: Layout },
   { id: 'hero', label: 'Hero Section', Icon: Rocket },
   { id: 'testimonials', label: 'Testimonials', Icon: MessageSquare },
   { id: 'services', label: 'Services Catalog', Icon: Cpu },
-  { id: 'bento', label: 'Bento Grid', Icon: Grid },
   { id: 'projects', label: 'Projects Showcase', Icon: FolderGit2 },
   { id: 'footer', label: 'Contact & Footer', Icon: Mail },
 ]

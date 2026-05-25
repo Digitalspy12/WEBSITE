@@ -710,61 +710,11 @@ function FounderCTA() {
 
 /* ─── Main export ──────────────────────────────────────────── */
 export function AchievementsSection() {
-  const { ref: headRef, inView: headIn } = useInView(0.15)
   const { ref: journeyHeaderRef, inView: journeyHeaderIn } = useInView(0.08)
   const { ref: foundersRef, inView: foundersIn } = useInView(0.1)
 
   return (
     <>
-      {/* ══════ SECTION 1 — Achievements ══════ */}
-      <section
-        id="achievements"
-        className="py-24 px-4 sm:px-6 relative overflow-hidden"
-        style={{ background: "var(--surface)" }}
-      >
-        <div
-          className="absolute pointer-events-none"
-          style={{
-            left: "50%", top: 0, transform: "translateX(-50%)",
-            width: "800px", height: "400px",
-            background: "radial-gradient(ellipse 60% 55% at 50% 0%, rgba(255,107,43,0.06) 0%, transparent 70%)",
-          }}
-        />
-        <div className="max-w-7xl mx-auto relative z-10">
-          <div
-            ref={headRef}
-            className="mb-12"
-            style={{
-              opacity: headIn ? 1 : 0,
-              transform: headIn ? "translateY(0)" : "translateY(24px)",
-              transition: "opacity 0.6s ease, transform 0.6s ease",
-            }}
-          >
-            <span className="text-xs font-mono font-semibold tracking-widest uppercase" style={{ color: "var(--primary)" }}>
-              Proven Results
-            </span>
-            <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-balance mt-3" style={{ color: "var(--foreground)" }}>
-              Achievements of{" "}
-              <span style={{ color: "var(--primary)" }} className="glow-text">Our Team</span>
-            </h2>
-            <p className="mt-4 text-base leading-relaxed max-w-lg" style={{ color: "var(--muted-foreground)" }}>
-              Every project is a milestone. Here are the moments that defined AK 0121 as an agency that ships things that matter.
-            </p>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
-            <BigStatCard value={20} suffix="+" label="Projects Shipped" sub="Across 6+ industries" delay={0} />
-            <BigStatCard value={8} suffix="wk" label="Avg. Delivery" sub="Kickoff to launch" delay={70} />
-            <BigStatCard value={91} suffix="%" label="AI Accuracy" sub="Fake news detection" delay={140} />
-            <BigStatCard value={60} suffix="%" label="Response Cut" sub="Emergency dispatch" delay={210} />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            {achievements.map((a, i) => (
-              <AchievementBadge key={a.title} {...a} delay={i * 80} />
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* ══════ SECTION 2 — Horizontal Photo Gallery ══════ */}
       <PhotoGallery />
 

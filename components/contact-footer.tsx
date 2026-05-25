@@ -21,8 +21,8 @@ const defaultSocials = [
 const defaultLinks = [
   { label: "Work", href: "#work" },
   { label: "Services", href: "#services" },
-  { label: "Achievements", href: "#achievements" },
-  { label: "Philosophy", href: "#philosophy" },
+  { label: "Journey", href: "#journey" },
+  { label: "Team", href: "#team" },
   { label: "Contact", href: "#contact" },
 ]
 
