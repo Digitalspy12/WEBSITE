@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import Image from "next/image"
-import { ArrowRight, Zap, Code2, Cpu, Globe, Terminal } from "lucide-react"
+import { ArrowRight, Zap, Code2, Cpu, Globe, Terminal, Sparkles } from "lucide-react"
 
 const DEFAULT_SHIP_IMG =
   "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-e5T5H20ObPFIi41vN1rPtbalJqBHNn.png"
@@ -305,9 +305,46 @@ export function HeroSection({ content }: { content?: any }) {
             </div>
           </BentoCell>
 
+          {/* H: Philosophy block — 3 cols, spans 2 rows on large screens */}
+          <BentoCell
+            className="col-span-12 lg:col-span-3 lg:row-span-2 p-6 flex flex-col justify-between gap-4"
+            delay={210}
+            style={{
+              background: "linear-gradient(135deg, #111111 0%, #1a1208 100%)",
+              border: "1px solid rgba(255,107,43,0.15)",
+              minHeight: "280px",
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <span
+                className="text-xs font-mono font-semibold tracking-widest uppercase"
+                style={{ color: "var(--primary)" }}
+              >
+                Philosophy
+              </span>
+              <Sparkles size={14} style={{ color: "var(--primary)", opacity: 0.8 }} />
+            </div>
+            
+            <div className="flex-1 flex flex-col justify-center my-3">
+              <p
+                className="text-lg font-medium leading-relaxed italic text-balance"
+                style={{ color: "var(--foreground)", textShadow: "0 0 30px rgba(255,107,43,0.1)" }}
+              >
+                "AI tools want you to do it yourself. We do it for you."
+              </p>
+            </div>
+
+            <div
+              className="text-xs font-mono tracking-wide"
+              style={{ color: "var(--muted-foreground)" }}
+            >
+              — The AK 0121 Philosophy
+            </div>
+          </BentoCell>
+
           {/* G: Tag cloud — 9 cols */}
           <BentoCell
-            className="col-span-12 lg:col-span-9 p-6 flex flex-col gap-4"
+            className="col-span-12 lg:col-span-9 p-6 flex flex-col items-center justify-center gap-4 text-center"
             delay={220}
             style={{ minHeight: "130px" }}
           >
@@ -317,7 +354,7 @@ export function HeroSection({ content }: { content?: any }) {
             >
               What We Deliver
             </span>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap justify-center gap-2">
               {tagsCloud.map((tag: string, i: number) => (
                 <span
                   key={tag}

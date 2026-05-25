@@ -1,6 +1,7 @@
 import { Navbar } from "@/components/navbar"
 import { HeroSection } from "@/components/hero-section"
 import { Ticker } from "@/components/ticker"
+import { TestimonialSection } from "@/components/testimonial-section"
 import { DfySection } from "@/components/dfy-section"
 import { BentoGrid } from "@/components/bento-grid"
 import { ProjectGallery } from "@/components/project-gallery"
@@ -23,6 +24,7 @@ export default async function Home() {
       <Navbar content={content} />
       <HeroSection content={content} />
       <Ticker />
+      <TestimonialSection content={content} />
       <DfySection />
       <BentoGrid content={content} />
       <ProjectGallery content={content} />

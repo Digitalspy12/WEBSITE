@@ -21,12 +21,14 @@ import {
   AlertCircle,
   Loader2,
   Cpu,
+  MessageSquare,
 } from 'lucide-react'
 
 // Tab definitions
 const TABS = [
   { id: 'navbar', label: 'Navbar & Brand', Icon: Layout },
   { id: 'hero', label: 'Hero Section', Icon: Rocket },
+  { id: 'testimonials', label: 'Testimonials', Icon: MessageSquare },
   { id: 'services', label: 'Services Catalog', Icon: Cpu },
   { id: 'bento', label: 'Bento Grid', Icon: Grid },
   { id: 'projects', label: 'Projects Showcase', Icon: FolderGit2 },
@@ -55,6 +57,84 @@ export default function AdminPage() {
         .order('key', { ascending: true })
 
       if (error) throw error
+
+      // Auto-seed missing keys for testimonials
+      const requiredKeys = ['testimonials.section_badge', 'testimonials.title_lead', 'testimonials.list']
+      const existingKeys = data ? data.map((item: any) => item.key) : []
+      const missingKeys = requiredKeys.filter(k => !existingKeys.includes(k))
+
+      if (missingKeys.length > 0) {
+        console.log('Seeding missing testimonials keys on admin load...', missingKeys)
+        const seedData = [
+          {
+            key: 'testimonials.section_badge',
+            value: 'Reviews',
+            type: 'text',
+            label: 'Testimonials Section Badge',
+            description: 'Small pill tag above section title'
+          },
+          {
+            key: 'testimonials.title_lead',
+            value: 'Customer Reviews',
+            type: 'text',
+            label: 'Testimonials Section Title',
+            description: 'Main title for Customer Reviews'
+          },
+          {
+            key: 'testimonials.list',
+            value: [
+              {
+                id: 1,
+                name: 'Edward Alexander',
+                avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150&h=150&fit=crop',
+                rating: 4.9,
+                date: '29 Aug, 2017',
+                text: 'The entire process was seamless. They understood my technical requirements instantly and built a custom dashboard in 4 weeks. Their code ownership model gives me total peace of mind.'
+              },
+              {
+                id: 2,
+                name: 'Diana Johnston',
+                avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&h=150&fit=crop',
+                rating: 4.9,
+                date: '29 Aug, 2017',
+                text: 'Overall pleasurable experience.Pay a little first and Pay a little during the development of the app as milestones are achieved, which made me feel very confident and comfortable.Seamless and Easy process.'
+              },
+              {
+                id: 3,
+                name: 'Lauren Contreras',
+                avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150&h=150&fit=crop',
+                rating: 4.9,
+                date: '29 Aug, 2017',
+                text: 'I was skeptical about a \'done-for-you\' tech agency, but AK 0121 exceeded all expectations. They built our automated supply chain dashboard in record time. Absolute senior engineering caliber.'
+              }
+            ],
+            type: 'list',
+            label: 'Testimonials Reviews List',
+            description: 'Reviews data containing avatar, name, rating, date, and review text.'
+          }
+        ]
+
+        const toInsert = seedData.filter(item => missingKeys.includes(item.key))
+
+        const { error: insertError } = await supabase
+          .from('site_content')
+          .insert(toInsert)
+
+        if (insertError) {
+          console.error('Failed to auto-seed testimonials keys:', insertError)
+        } else {
+          // Refetch to get the newly inserted records
+          const { data: refetchedData, error: refetchError } = await supabase
+            .from('site_content')
+            .select('*')
+            .order('key', { ascending: true })
+          if (!refetchError && refetchedData) {
+            setContent(refetchedData)
+            return
+          }
+        }
+      }
+
       setContent(data || [])
     } catch (e: any) {
       showStatus('error', e.message || 'Failed to fetch content data.')
@@ -135,11 +215,12 @@ export default function AdminPage() {
 
       // 4. Update state and save
       if (targetIndex !== undefined) {
-        // We are updating an image inside an array of objects (like projects list)
+        // We are updating an image inside an array of objects
         const record = content.find((item) => item.key === key)
         if (record) {
           const list = [...record.value]
-          list[targetIndex] = { ...list[targetIndex], img: publicUrl }
+          const fieldName = key === 'testimonials.list' ? 'avatar' : 'img'
+          list[targetIndex] = { ...list[targetIndex], [fieldName]: publicUrl }
           handleLocalValueChange(key, list)
           await saveRecord(key, list)
         }
@@ -222,6 +303,46 @@ export default function AdminPage() {
 
   const updateProjectField = (index: number, field: string, value: any) => {
     const key = 'projects.list'
+    const record = content.find((item) => item.key === key)
+    if (record) {
+      const updatedList = [...record.value]
+      updatedList[index] = { ...updatedList[index], [field]: value }
+      handleLocalValueChange(key, updatedList)
+    }
+  }
+
+  // Helpers for Testimonials List management
+  const addTestimonial = () => {
+    const key = 'testimonials.list'
+    const record = content.find((item) => item.key === key)
+    if (record) {
+      const updatedList = [
+        ...record.value,
+        {
+          id: Date.now(),
+          name: 'New Reviewer',
+          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&h=150&fit=crop',
+          rating: 4.9,
+          date: '29 Aug, 2017',
+          text: 'Overall pleasurable experience. Seamless and easy process.',
+        },
+      ]
+      handleLocalValueChange(key, updatedList)
+    }
+  }
+
+  const removeTestimonial = (index: number) => {
+    const key = 'testimonials.list'
+    const record = content.find((item) => item.key === key)
+    if (record) {
+      const updatedList = [...record.value]
+      updatedList.splice(index, 1)
+      handleLocalValueChange(key, updatedList)
+    }
+  }
+
+  const updateTestimonialField = (index: number, field: string, value: any) => {
+    const key = 'testimonials.list'
     const record = content.find((item) => item.key === key)
     if (record) {
       const updatedList = [...record.value]
@@ -463,9 +584,140 @@ export default function AdminPage() {
                 </div>
               )}
 
+              {/* SPECIAL CASE: TESTIMONIALS CUSTOM LIST EDITOR */}
+              {activeTab === 'testimonials' && (
+                <div className="p-6 rounded-2xl border flex flex-col gap-6"
+                  style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}
+                >
+                  <div className="flex items-center justify-between border-b pb-4" style={{ borderColor: 'var(--border)' }}>
+                    <div>
+                      <h2 className="text-base font-bold" style={{ color: 'var(--foreground)' }}>
+                        Customer Testimonials
+                      </h2>
+                      <p className="text-xs mt-1" style={{ color: 'var(--muted-foreground)' }}>
+                        Manage reviewer profiles, names, ratings, and quotes displayed on the homepage curved arc layout.
+                      </p>
+                    </div>
+                    <button
+                      onClick={addTestimonial}
+                      className="flex items-center gap-1.5 px-4 py-2 bg-primary/10 border border-primary/20 rounded-full text-xs font-bold transition-all hover:bg-primary/20"
+                      style={{ color: 'var(--primary)' }}
+                    >
+                      <Plus size={12} /> Add Review
+                    </button>
+                  </div>
+
+                  {content.find((i) => i.key === 'testimonials.list')?.value.map((testimonial: any, index: number) => (
+                    <div
+                      key={testimonial.id || index}
+                      className="p-5 rounded-xl border flex flex-col lg:flex-row gap-5"
+                      style={{ background: 'var(--surface-raised)', borderColor: 'var(--border)' }}
+                    >
+                      {/* Reviewer Avatar Image Handler */}
+                      <div className="w-full lg:w-48 flex flex-col gap-2">
+                        <div className="relative h-28 w-full rounded-lg overflow-hidden border bg-black/30" style={{ borderColor: 'var(--border)' }}>
+                          {testimonial.avatar ? (
+                            <img src={testimonial.avatar} alt={testimonial.name} className="object-cover w-full h-full" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">No Photo</div>
+                          )}
+                        </div>
+                        <label className="flex items-center justify-center gap-1.5 py-2 border rounded-lg text-[10px] font-mono font-bold cursor-pointer hover:bg-white/5 transition-all">
+                          {uploadingImage === `testimonials.list-${index}` ? (
+                            <Loader2 size={10} className="animate-spin" />
+                          ) : (
+                            <Upload size={10} />
+                          )}
+                          Change Photo
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => handleImageUpload(e, 'testimonials.list', index)}
+                          />
+                        </label>
+                      </div>
+
+                      {/* Fields editor grid */}
+                      <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">Full Name</label>
+                          <input
+                            type="text"
+                            value={testimonial.name}
+                            onChange={(e) => updateTestimonialField(index, 'name', e.target.value)}
+                            className="px-3.5 py-2 border rounded-lg text-xs outline-none bg-black/20"
+                            style={{ borderColor: 'var(--border)' }}
+                          />
+                        </div>
+
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">Rating Star Score (e.g. 4.9)</label>
+                          <input
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            max="5"
+                            value={testimonial.rating}
+                            onChange={(e) => updateTestimonialField(index, 'rating', parseFloat(e.target.value) || 0)}
+                            className="px-3.5 py-2 border rounded-lg text-xs outline-none bg-black/20"
+                            style={{ borderColor: 'var(--border)' }}
+                          />
+                        </div>
+
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">Review Date (e.g. 29 Aug, 2017)</label>
+                          <input
+                            type="text"
+                            value={testimonial.date}
+                            onChange={(e) => updateTestimonialField(index, 'date', e.target.value)}
+                            className="px-3.5 py-2 border rounded-lg text-xs outline-none bg-black/20"
+                            style={{ borderColor: 'var(--border)' }}
+                          />
+                        </div>
+
+                        <div className="flex flex-col gap-1 col-span-1 sm:col-span-2">
+                          <label className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">Review Text Box</label>
+                          <textarea
+                            value={testimonial.text}
+                            onChange={(e) => updateTestimonialField(index, 'text', e.target.value)}
+                            rows={3}
+                            className="px-3.5 py-2 border rounded-lg text-xs outline-none bg-black/20 resize-none"
+                            style={{ borderColor: 'var(--border)' }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex lg:flex-col justify-end gap-2 shrink-0">
+                        <button
+                          onClick={() => removeTestimonial(index)}
+                          className="p-2 border border-red-500/20 text-red-500 rounded-lg bg-red-500/5 hover:bg-red-500/20 transition-all cursor-pointer"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+
+                  <button
+                    onClick={() => saveRecord('testimonials.list', content.find((i) => i.key === 'testimonials.list')?.value)}
+                    disabled={saving === 'testimonials.list'}
+                    className="w-full py-3.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all disabled:opacity-50"
+                    style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}
+                  >
+                    {saving === 'testimonials.list' ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <Save size={14} />
+                    )}
+                    Save and Apply Testimonials List
+                  </button>
+                </div>
+              )}
+
               {/* STANDARD EDITABLE FIELDS FORM LIST */}
               {getTabRecords()
-                .filter((r) => r.key !== 'projects.list')
+                .filter((r) => r.key !== 'projects.list' && r.key !== 'testimonials.list')
                 .map((record) => (
                   <div
                     key={record.key}
