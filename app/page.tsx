@@ -6,6 +6,7 @@ import { DfySection } from "@/components/dfy-section"
 import { ProjectGallery } from "@/components/project-gallery"
 import { AchievementsSection } from "@/components/achievements-section"
 import { ServicesSection } from "@/components/services-section"
+import { ProcessSection } from "@/components/process-section"
 import { ContactFooter } from "@/components/contact-footer"
 
 import { getCachedSiteContent } from "@/lib/supabase/content"
@@ -25,6 +26,7 @@ export default async function Home() {
       <TestimonialSection content={content} />
       <DfySection />
       <ServicesSection content={content} />
+      <ProcessSection />
       <ProjectGallery content={content} />
       <AchievementsSection />
       <ContactFooter content={content} />

@@ -33,7 +33,7 @@ export async function updateSiteContent(key: string, value: any) {
     }
 
     // 3. Purge Next.js data cache tag instantly
-    revalidateTag('site-content')
+    ;(revalidateTag as any)('site-content')
 
     return { success: true }
   } catch (e: any) {
