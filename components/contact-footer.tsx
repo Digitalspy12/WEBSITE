@@ -1,7 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { ArrowRight, Mail, Github, Twitter, Linkedin } from "lucide-react"
+import { ArrowRight, Mail, Github, Twitter, Linkedin, Loader2 } from "lucide-react"
+import { submitLead } from "@/app/actions"
 
 // Social icon mapping index
 const iconMap: { [key: string]: any } = {
@@ -26,24 +27,75 @@ const defaultLinks = [
   { label: "Contact", href: "#contact" },
 ]
 
+// Helper to decode HTML entities from Supabase CMS content
+function decodeHtml(str: string): string {
+  return str
+    .replace(/&apos;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+}
+
+// Validate email: proper format + domain must contain letters (rejects 133213.com)
+function isValidEmail(email: string): boolean {
+  const trimmed = email.trim().toLowerCase()
+  // Basic format check
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+  if (!emailRegex.test(trimmed)) return false
+
+  // Extract domain name (before TLD)
+  const domain = trimmed.split('@')[1]
+  const domainName = domain.split('.').slice(0, -1).join('.')
+
+  // Domain name must contain at least one letter (rejects purely numeric domains)
+  if (!/[a-zA-Z]/.test(domainName)) return false
+
+  return true
+}
+
 // ── Email CTA + Contact ────────────────────────────────────────────
 function ContactSection({ content }: { content?: any }) {
   const [email, setEmail] = useState("")
   const [submitted, setSubmitted] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState("")
 
-  // Map dynamic configs with fallbacks
-  const sectionBadge = content?.['contact.section_badge'] || "Get In Touch"
-  const titleLead = content?.['contact.title_lead'] || "Ready to stop doing it "
-  const titleGlow = content?.['contact.title_glow'] || "yourself?"
-  const description = content?.['contact.description'] || "Tell us your biggest bottleneck. We'll come back with an architecture and timeline — no fluff, no sales pitch."
-  const btnText = content?.['contact.btn_text'] || "Start Project"
+  // Map dynamic configs with fallbacks + decode HTML entities
+  const sectionBadge = decodeHtml(content?.['contact.section_badge'] || "Get In Touch")
+  const titleLead = decodeHtml(content?.['contact.title_lead'] || "Ready to stop doing it ")
+  const titleGlow = decodeHtml(content?.['contact.title_glow'] || "yourself?")
+  const description = decodeHtml(content?.['contact.description'] || "Tell us your biggest bottleneck. We'll come back with an architecture and timeline — no fluff, no sales pitch.")
+  const btnText = decodeHtml(content?.['contact.btn_text'] || "Start Project")
   const placeholder = content?.['contact.placeholder'] || "your@email.com"
-  const successMessage = content?.['contact.success_message'] || "We'll reach out within 24 hours. Let's build."
-  const disclaimer = content?.['contact.disclaimer'] || "No commitment required. Response within 24 hours."
+  const successMessage = decodeHtml(content?.['contact.success_message'] || "We'll contact you within 2 hours. Let's build.")
+  const disclaimer = decodeHtml(content?.['contact.disclaimer'] || "No commitment required. Response within 2 hours.")
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (email) setSubmitted(true)
+    if (!email) return
+
+    // Client-side email validation
+    if (!isValidEmail(email)) {
+      setError("Please enter a valid email address with a real domain (e.g. name@gmail.com).")
+      return
+    }
+
+    setSubmitting(true)
+    setError("")
+
+    try {
+      const result = await submitLead(email)
+      if (result.success) {
+        setSubmitted(true)
+      } else {
+        setError(result.error || "Something went wrong. Please try again.")
+      }
+    } catch {
+      setError("Network error. Please check your connection and try again.")
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -105,34 +157,52 @@ function ContactSection({ content }: { content?: any }) {
             {successMessage}
           </div>
         ) : (
-          <form
-            onSubmit={handleSubmit}
-            className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full max-w-md"
-          >
-            <input
-              type="email"
-              required
-              placeholder={placeholder}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="flex-1 px-5 py-3.5 rounded-full text-sm outline-none"
-              style={{
-                background: "rgba(255,255,255,0.06)",
-                border: "1px solid rgba(255,255,255,0.1)",
-                color: "var(--foreground)",
-              }}
-              onFocus={(e) => { e.currentTarget.style.borderColor = "var(--primary)" }}
-              onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)" }}
-            />
-            <button
-              type="submit"
-              className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-85 shrink-0"
-              style={{ background: "var(--primary)", color: "var(--primary-foreground)" }}
+          <div className="flex flex-col items-center gap-3 w-full max-w-md">
+            <form
+              onSubmit={handleSubmit}
+              className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full"
             >
-              {btnText}
-              <ArrowRight size={14} />
-            </button>
-          </form>
+              <input
+                type="email"
+                required
+                disabled={submitting}
+                placeholder={placeholder}
+                value={email}
+                onChange={(e) => { setEmail(e.target.value); setError("") }}
+                className="flex-1 px-5 py-3.5 rounded-full text-sm outline-none disabled:opacity-50"
+                style={{
+                  background: "rgba(255,255,255,0.06)",
+                  border: `1px solid ${error ? "rgba(239,68,68,0.4)" : "rgba(255,255,255,0.1)"}`,
+                  color: "var(--foreground)",
+                }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = "var(--primary)" }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = error ? "rgba(239,68,68,0.4)" : "rgba(255,255,255,0.1)" }}
+              />
+              <button
+                type="submit"
+                disabled={submitting}
+                className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-full text-sm font-semibold cursor-pointer transition-opacity hover:opacity-85 shrink-0 disabled:opacity-60 disabled:cursor-not-allowed"
+                style={{ background: "var(--primary)", color: "var(--primary-foreground)" }}
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    {btnText}
+                    <ArrowRight size={14} />
+                  </>
+                )}
+              </button>
+            </form>
+            {error && (
+              <p className="text-xs font-medium" style={{ color: "#ef4444" }}>
+                {error}
+              </p>
+            )}
+          </div>
         )}
 
         <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>

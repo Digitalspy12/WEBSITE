@@ -219,6 +219,7 @@ export function ProjectGallery({ content }: { content?: any }) {
   const [activeIdx, setActiveIdx] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
   const [isHovering, setIsHovering] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const dragStartX = useRef(0)
   const scrollStart = useRef(0)
   const autoScrollRef = useRef<NodeJS.Timeout | null>(null)
@@ -318,6 +319,7 @@ export function ProjectGallery({ content }: { content?: any }) {
 
   /* Auto-start on mount */
   useEffect(() => {
+    setMounted(true)
     startAutoScroll()
     return () => stopAutoScroll()
   }, [projects.length])
@@ -401,7 +403,7 @@ export function ProjectGallery({ content }: { content?: any }) {
           </div>
           <button
             onClick={() => scrollTo(activeIdx - 1)}
-            disabled={activeIdx === 0}
+            disabled={mounted && activeIdx === 0}
             className="w-10 h-10 rounded-full flex items-center justify-center cursor-pointer transition-all duration-200 disabled:opacity-30"
             style={{
               background: "var(--surface)",
@@ -414,7 +416,7 @@ export function ProjectGallery({ content }: { content?: any }) {
           </button>
           <button
             onClick={() => scrollTo(activeIdx + 1)}
-            disabled={activeIdx === projects.length - 1}
+            disabled={mounted && activeIdx === projects.length - 1}
             className="w-10 h-10 rounded-full flex items-center justify-center cursor-pointer transition-all duration-200 disabled:opacity-30"
             style={{
               background: "rgba(255,107,43,0.15)",

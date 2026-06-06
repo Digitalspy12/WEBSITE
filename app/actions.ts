@@ -41,3 +41,112 @@ export async function updateSiteContent(key: string, value: any) {
     return { success: false, error: e.message || 'An unexpected server error occurred.' }
   }
 }
+
+/**
+ * Server Action: Submits a project lead email from the public contact form.
+ * Does NOT require authentication — public visitors can submit.
+ * The leads table has a public INSERT RLS policy.
+ */
+export async function submitLead(email: string) {
+  try {
+    const trimmed = (email || '').trim().toLowerCase()
+
+    // Validate email format
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+    if (!emailRegex.test(trimmed)) {
+      return { success: false, error: 'Please provide a valid email address.' }
+    }
+
+    // Domain must contain at least one letter (rejects purely numeric domains like 133213.com)
+    const domain = trimmed.split('@')[1]
+    const domainName = domain.split('.').slice(0, -1).join('.')
+    if (!/[a-zA-Z]/.test(domainName)) {
+      return { success: false, error: 'Please use a valid email domain.' }
+    }
+
+    const supabase = await createClient()
+
+    const { error } = await supabase
+      .from('leads')
+      .insert({ email: trimmed })
+
+    if (error) {
+      console.error('Failed to insert lead:', error)
+      return { success: false, error: error.message }
+    }
+
+    return { success: true }
+  } catch (e: any) {
+    console.error('Server Action Error in submitLead:', e)
+    return { success: false, error: e.message || 'Failed to submit. Please try again.' }
+  }
+}
+
+/**
+ * Server Action: Updates a lead's status (e.g., new → contacted → archived).
+ * Requires authentication.
+ */
+export async function updateLeadStatus(id: number, status: string) {
+  try {
+    const supabase = await createClient()
+
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      throw new Error('Unauthorized.')
+    }
+
+    const { error } = await supabase
+      .from('leads')
+      .update({ status })
+      .eq('id', id)
+
+    if (error) {
+      console.error('Failed to update lead status:', error)
+      return { success: false, error: error.message }
+    }
+
+    return { success: true }
+  } catch (e: any) {
+    console.error('Server Action Error in updateLeadStatus:', e)
+    return { success: false, error: e.message || 'Failed to update lead.' }
+  }
+}
+
+/**
+ * Server Action: Deletes a lead record permanently.
+ * Requires authentication.
+ */
+export async function deleteLead(id: number) {
+  try {
+    const supabase = await createClient()
+
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      throw new Error('Unauthorized.')
+    }
+
+    const { error } = await supabase
+      .from('leads')
+      .delete()
+      .eq('id', id)
+
+    if (error) {
+      console.error('Failed to delete lead:', error)
+      return { success: false, error: error.message }
+    }
+
+    return { success: true }
+  } catch (e: any) {
+    console.error('Server Action Error in deleteLead:', e)
+    return { success: false, error: e.message || 'Failed to delete lead.' }
+  }
+}
+
