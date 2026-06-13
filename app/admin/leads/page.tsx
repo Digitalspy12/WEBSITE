@@ -18,6 +18,8 @@ interface Lead {
   id: number
   created_at: string
   email: string
+  name?: string
+  phone?: string
   status: 'new' | 'contacted' | 'archived'
 }
 
@@ -218,10 +220,15 @@ export default function LeadsPage() {
                     >
                       <Mail size={16} style={{ color: 'var(--primary)' }} />
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex flex-col">
                       <p className="text-sm font-semibold truncate" style={{ color: 'var(--foreground)' }}>
-                        {lead.email}
+                        {lead.name ? `${lead.name} (${lead.email})` : lead.email}
                       </p>
+                      {lead.phone && (
+                        <p className="text-xs truncate mt-0.5" style={{ color: 'var(--muted-foreground)' }}>
+                          {lead.phone}
+                        </p>
+                      )}
                       <p className="text-[10px] font-mono mt-0.5" style={{ color: 'var(--muted-foreground)' }}>
                         {new Date(lead.created_at).toLocaleDateString('en-US', {
                           weekday: 'short',

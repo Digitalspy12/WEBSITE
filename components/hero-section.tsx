@@ -150,8 +150,8 @@ export function HeroSection({ content }: { content?: any }) {
             className="col-span-12 lg:col-span-8 p-7 md:p-9 flex flex-col justify-between gap-6"
             delay={0}
             style={{
-              background: "linear-gradient(135deg,#141414 0%,#1a1208 100%)",
-              border: "1px solid rgba(255,107,43,0.18)",
+              background: "var(--card)",
+              border: "1px solid rgba(0,0,0,0.1)",
               minHeight: "220px",
             }}
           >
@@ -224,8 +224,8 @@ export function HeroSection({ content }: { content?: any }) {
             delay={80}
             style={{
               minHeight: "320px",
-              background: "#0f0f0f",
-              border: "1px solid rgba(255,107,43,0.15)",
+              background: "var(--card)",
+              border: "1px solid rgba(0,0,0,0.1)",
               padding: 0,
             }}
           >
@@ -234,7 +234,7 @@ export function HeroSection({ content }: { content?: any }) {
               <div
                 className="absolute inset-0 z-10 pointer-events-none"
                 style={{
-                  background: "linear-gradient(to bottom,transparent 50%,#0f0f0f 100%)",
+                  background: "linear-gradient(to bottom,transparent 50%,var(--card) 100%)",
                 }}
               />
               <Image
@@ -276,7 +276,7 @@ export function HeroSection({ content }: { content?: any }) {
           <BentoCell
             className="col-span-6 lg:col-span-3 p-5 flex flex-col justify-between"
             delay={180}
-            style={{ background: "#0d0d0d", border: "1px solid rgba(255,255,255,0.06)", minHeight: "140px" }}
+            style={{ background: "var(--card)", border: "1px solid rgba(0,0,0,0.1)", minHeight: "140px" }}
           >
             <div className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-full bg-red-500/70" />
@@ -310,8 +310,8 @@ export function HeroSection({ content }: { content?: any }) {
             className="col-span-12 lg:col-span-3 lg:row-span-2 p-6 flex flex-col justify-between gap-4"
             delay={210}
             style={{
-              background: "linear-gradient(135deg, #111111 0%, #1a1208 100%)",
-              border: "1px solid rgba(255,107,43,0.15)",
+              background: "var(--card)",
+              border: "1px solid rgba(0,0,0,0.1)",
               minHeight: "280px",
             }}
           >

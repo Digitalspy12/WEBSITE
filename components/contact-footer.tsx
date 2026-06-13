@@ -56,6 +56,8 @@ function isValidEmail(email: string): boolean {
 
 // ── Email CTA + Contact ────────────────────────────────────────────
 function ContactSection({ content }: { content?: any }) {
+  const [name, setName] = useState("")
+  const [phone, setPhone] = useState("")
   const [email, setEmail] = useState("")
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -73,7 +75,10 @@ function ContactSection({ content }: { content?: any }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!email) return
+    if (!email || !name || !phone) {
+      setError("Please fill out all fields.")
+      return
+    }
 
     // Client-side email validation
     if (!isValidEmail(email)) {
@@ -85,7 +90,7 @@ function ContactSection({ content }: { content?: any }) {
     setError("")
 
     try {
-      const result = await submitLead(email)
+      const result = await submitLead(email, name, phone)
       if (result.success) {
         setSubmitted(true)
       } else {
@@ -160,24 +165,59 @@ function ContactSection({ content }: { content?: any }) {
           <div className="flex flex-col items-center gap-3 w-full max-w-md">
             <form
               onSubmit={handleSubmit}
-              className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full"
+              className="flex flex-col gap-3 w-full"
             >
-              <input
-                type="email"
-                required
-                disabled={submitting}
-                placeholder={placeholder}
-                value={email}
-                onChange={(e) => { setEmail(e.target.value); setError("") }}
-                className="flex-1 px-5 py-3.5 rounded-full text-sm outline-none disabled:opacity-50"
-                style={{
-                  background: "rgba(255,255,255,0.06)",
-                  border: `1px solid ${error ? "rgba(239,68,68,0.4)" : "rgba(255,255,255,0.1)"}`,
-                  color: "var(--foreground)",
-                }}
-                onFocus={(e) => { e.currentTarget.style.borderColor = "var(--primary)" }}
-                onBlur={(e) => { e.currentTarget.style.borderColor = error ? "rgba(239,68,68,0.4)" : "rgba(255,255,255,0.1)" }}
-              />
+              <div className="flex flex-col sm:flex-row gap-3">
+                <input
+                  type="text"
+                  required
+                  disabled={submitting}
+                  placeholder="Your Name"
+                  value={name}
+                  onChange={(e) => { setName(e.target.value); setError("") }}
+                  className="flex-1 px-5 py-3.5 rounded-full text-sm outline-none disabled:opacity-50"
+                  style={{
+                    background: "rgba(255,255,255,0.06)",
+                    border: `1px solid ${error ? "rgba(239,68,68,0.4)" : "rgba(255,255,255,0.1)"}`,
+                    color: "var(--foreground)",
+                  }}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = "var(--primary)" }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = error ? "rgba(239,68,68,0.4)" : "rgba(255,255,255,0.1)" }}
+                />
+                <input
+                  type="tel"
+                  required
+                  disabled={submitting}
+                  placeholder="Your Phone"
+                  value={phone}
+                  onChange={(e) => { setPhone(e.target.value); setError("") }}
+                  className="flex-1 px-5 py-3.5 rounded-full text-sm outline-none disabled:opacity-50"
+                  style={{
+                    background: "rgba(255,255,255,0.06)",
+                    border: `1px solid ${error ? "rgba(239,68,68,0.4)" : "rgba(255,255,255,0.1)"}`,
+                    color: "var(--foreground)",
+                  }}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = "var(--primary)" }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = error ? "rgba(239,68,68,0.4)" : "rgba(255,255,255,0.1)" }}
+                />
+              </div>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <input
+                  type="email"
+                  required
+                  disabled={submitting}
+                  placeholder={placeholder}
+                  value={email}
+                  onChange={(e) => { setEmail(e.target.value); setError("") }}
+                  className="flex-1 px-5 py-3.5 rounded-full text-sm outline-none disabled:opacity-50"
+                  style={{
+                    background: "rgba(255,255,255,0.06)",
+                    border: `1px solid ${error ? "rgba(239,68,68,0.4)" : "rgba(255,255,255,0.1)"}`,
+                    color: "var(--foreground)",
+                  }}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = "var(--primary)" }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = error ? "rgba(239,68,68,0.4)" : "rgba(255,255,255,0.1)" }}
+                />
               <button
                 type="submit"
                 disabled={submitting}
@@ -196,6 +236,7 @@ function ContactSection({ content }: { content?: any }) {
                   </>
                 )}
               </button>
+              </div>
             </form>
             {error && (
               <p className="text-xs font-medium" style={{ color: "#ef4444" }}>

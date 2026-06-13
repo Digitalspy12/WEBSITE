@@ -153,8 +153,8 @@ export function BentoGrid({ content }: { content?: any }) {
             className="md:col-span-2 md:row-span-2 p-8 flex flex-col justify-between min-h-[300px]"
             delay={0}
             style={{
-              background: "linear-gradient(135deg, #161616 0%, #1a1208 100%)",
-              border: "1px solid rgba(255,107,43,0.15)",
+              background: "var(--card)",
+              border: "1px solid rgba(0,0,0,0.1)",
             }}
           >
             <div className="flex flex-col gap-4">
@@ -193,8 +193,8 @@ export function BentoGrid({ content }: { content?: any }) {
             className="flex flex-col overflow-hidden min-h-[220px]"
             delay={80}
             style={{
-              background: "#0f0f0f",
-              border: "1px solid rgba(255,107,43,0.15)",
+              background: "var(--card)",
+              border: "1px solid rgba(0,0,0,0.1)",
               padding: 0,
             }}
           >
@@ -202,7 +202,7 @@ export function BentoGrid({ content }: { content?: any }) {
             <div className="relative w-full" style={{ height: "130px" }}>
               <div
                 className="absolute inset-0 z-10 pointer-events-none"
-                style={{ background: "linear-gradient(to bottom,transparent 40%,#0f0f0f 100%)" }}
+                style={{ background: "linear-gradient(to bottom,transparent 40%,var(--card) 100%)" }}
               />
               <Image
                 src={shipImg}
@@ -229,8 +229,8 @@ export function BentoGrid({ content }: { content?: any }) {
             className="p-6 flex flex-col gap-3 justify-center items-start min-h-[140px]"
             delay={130}
             style={{
-              background: "linear-gradient(135deg, #161616, #111820)",
-              border: "1px solid rgba(68,136,255,0.15)",
+              background: "var(--card)",
+              border: "1px solid rgba(0,0,0,0.1)",
             }}
           >
             <div
@@ -269,8 +269,8 @@ export function BentoGrid({ content }: { content?: any }) {
             className="md:col-span-2 p-6 min-h-[160px] flex flex-col justify-between"
             delay={240}
             style={{
-              background: "#0d0d0d",
-              border: "1px solid rgba(255,255,255,0.06)",
+              background: "var(--card)",
+              border: "1px solid rgba(0,0,0,0.1)",
             }}
           >
             <div className="flex items-center gap-2 mb-3">
@@ -339,8 +339,8 @@ export function BentoGrid({ content }: { content?: any }) {
             className="md:col-span-2 p-8 flex flex-col justify-center min-h-[140px]"
             delay={350}
             style={{
-              background: "linear-gradient(135deg, #161616 0%, #1a1208 100%)",
-              border: "1px solid rgba(255,107,43,0.15)",
+              background: "var(--card)",
+              border: "1px solid rgba(0,0,0,0.1)",
             }}
           >
             <blockquote className="text-lg md:text-xl font-semibold leading-relaxed" style={{ color: "var(--foreground)" }}>

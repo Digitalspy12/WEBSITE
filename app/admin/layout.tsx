@@ -17,6 +17,7 @@ import {
   Menu,
   X,
 } from 'lucide-react'
+import { ThemeToggle } from '@/components/theme-toggle'
 
 const NAV_ITEMS = [
   { href: '/admin', label: 'System Health', Icon: Activity, description: 'Status & uptime' },
@@ -50,7 +51,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Top Header */}
       <header
         className="px-4 md:px-6 py-3 flex items-center justify-between border-b sticky top-0 z-50 backdrop-blur-xl"
-        style={{ borderColor: 'var(--border)', background: 'rgba(10,10,10,0.9)' }}
+        style={{ borderColor: 'var(--border)', background: 'var(--background)' }}
       >
         <div className="flex items-center gap-3">
           <button
@@ -76,20 +77,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         </div>
 
-        <button
-          onClick={handleSignOut}
-          className="flex items-center gap-2 px-4 py-2 border rounded-full text-xs font-semibold cursor-pointer hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-500 transition-all duration-200"
-          style={{ borderColor: 'var(--border)', color: 'var(--muted-foreground)' }}
-        >
-          <LogOut size={12} /> Sign Out
-        </button>
+        <div className="flex items-center gap-3">
+          <ThemeToggle />
+          <button
+            onClick={handleSignOut}
+            className="flex items-center gap-2 px-4 py-2 border rounded-full text-xs font-semibold cursor-pointer hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-500 transition-all duration-200"
+            style={{ borderColor: 'var(--border)', color: 'var(--muted-foreground)' }}
+          >
+            <LogOut size={12} /> Sign Out
+          </button>
+        </div>
       </header>
 
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar — Desktop */}
         <aside
           className="hidden md:flex w-56 shrink-0 flex-col border-r p-3 gap-1 overflow-y-auto"
-          style={{ borderColor: 'var(--border)', background: 'rgba(10,10,10,0.5)' }}
+          style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}
         >
           {NAV_ITEMS.map(({ href, label, Icon, description }) => {
             const active = isActive(href)

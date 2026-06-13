@@ -43,28 +43,48 @@ export function Navbar({ content }: { content?: any }) {
           borderBottom: scrolled ? "1px solid rgba(255,255,255,0.06)" : "1px solid transparent",
         }}
       >
-        <nav className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          {/* Logo */}
-          <a href="#" className="flex items-center gap-2.5 group">
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black tracking-tighter"
-              style={{ background: "var(--primary)", color: "var(--primary-foreground)" }}
-            >
-              {brandShort}
-            </div>
-            <span
-              className="font-mono font-bold text-sm tracking-tight"
-              style={{ color: "var(--foreground)" }}
-            >
-              {brandFull.split(' ')[0]} <span style={{ color: "var(--primary)" }}>{brandFull.split(' ').slice(1).join(' ')}</span>
-            </span>
-          </a>
+        <nav className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between relative">
+          
+          {/* Left links (Desktop) */}
+          <div className="hidden md:flex flex-1 items-center gap-8 justify-end pr-8">
+            {links.slice(0, 2).map((link: any) => (
+              <button
+                key={link.href}
+                onClick={() => handleNav(link.href)}
+                className="text-sm transition-colors duration-200 cursor-pointer"
+                style={{ color: "var(--muted-foreground)" }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "var(--foreground)")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "var(--muted-foreground)")}
+              >
+                {link.label}
+              </button>
+            ))}
+          </div>
 
-          {/* Desktop links */}
-          <ul className="hidden md:flex items-center gap-7">
-            {links.map((link: any) => (
-              <li key={link.href}>
+          {/* Logo (Center on Desktop, Left on Mobile) */}
+          <div className="flex shrink-0 items-center">
+            <a href="#" className="flex items-center gap-2.5 group">
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black tracking-tighter"
+                style={{ background: "var(--primary)", color: "var(--primary-foreground)" }}
+              >
+                {brandShort}
+              </div>
+              <span
+                className="font-mono font-bold text-sm tracking-tight"
+                style={{ color: "var(--foreground)" }}
+              >
+                {brandFull.split(' ')[0]} <span style={{ color: "var(--primary)" }}>{brandFull.split(' ').slice(1).join(' ')}</span>
+              </span>
+            </a>
+          </div>
+
+          {/* Right links and CTA (Desktop) */}
+          <div className="hidden md:flex flex-1 items-center justify-between pl-8">
+            <div className="flex items-center gap-8">
+              {links.slice(2).map((link: any) => (
                 <button
+                  key={link.href}
                   onClick={() => handleNav(link.href)}
                   className="text-sm transition-colors duration-200 cursor-pointer"
                   style={{ color: "var(--muted-foreground)" }}
@@ -73,15 +93,11 @@ export function Navbar({ content }: { content?: any }) {
                 >
                   {link.label}
                 </button>
-              </li>
-            ))}
-          </ul>
-
-          {/* CTA */}
-          <div className="hidden md:flex items-center gap-3">
+              ))}
+            </div>
             <button
               onClick={() => handleNav("#contact")}
-              className="text-sm px-5 py-2 rounded-full font-semibold transition-all duration-200 cursor-pointer"
+              className="text-sm px-5 py-2 rounded-full font-semibold transition-all duration-200 cursor-pointer shrink-0"
               style={{ background: "var(--primary)", color: "var(--primary-foreground)" }}
               onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.85" }}
               onMouseLeave={(e) => { e.currentTarget.style.opacity = "1" }}
@@ -92,7 +108,7 @@ export function Navbar({ content }: { content?: any }) {
 
           {/* Mobile toggle */}
           <button
-            className="md:hidden p-2"
+            className="md:hidden p-2 ml-auto"
             style={{ color: "var(--foreground)" }}
             onClick={() => setOpen(!open)}
             aria-label="Toggle menu"

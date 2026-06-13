@@ -163,8 +163,8 @@ function BigStatCard({
       ref={ref}
       className="bento-card p-6 flex flex-col justify-between"
       style={{
-        background: "linear-gradient(135deg,#161616 0%,#1a1208 100%)",
-        border: "1px solid rgba(255,107,43,0.18)",
+        background: "var(--card)",
+        border: "1px solid rgba(0,0,0,0.1)",
         opacity: inView ? 1 : 0,
         transform: inView ? "scale(1)" : "scale(0.94)",
         transition: `opacity 0.55s ease ${delay}ms, transform 0.55s ease ${delay}ms`,
@@ -285,7 +285,7 @@ function TimelineItem({
           style={{
             border: `1px solid ${milestone.border}`,
             background: milestone.isCurrent
-              ? "linear-gradient(135deg,#161616 0%,#1a1208 100%)"
+              ? "var(--card)"
               : "var(--surface)",
           }}
         >
@@ -359,7 +359,7 @@ function PhotoGallery() {
       ref={sectionRef}
       className="relative overflow-hidden"
       style={{
-        background: "#0d0d0d",
+        background: "var(--card)",
         opacity: inView ? 1 : 0,
         transition: "opacity 0.7s ease",
       }}
@@ -469,9 +469,10 @@ function PhotoGallery() {
               width: i === 1 ? "340px" : "280px",
               height: i === 1 ? "300px" : "220px",
               alignSelf: i % 2 === 0 ? "flex-end" : "flex-start",
+              background: "var(--card)",
               border: activeIdx === i
                 ? "2px solid rgba(255,107,43,0.7)"
-                : "1px solid rgba(255,255,255,0.08)",
+                : "1px solid rgba(0,0,0,0.1)",
               transform: activeIdx === i ? "scale(1.03)" : "scale(1)",
               boxShadow: activeIdx === i ? "0 0 40px rgba(255,107,43,0.25)" : "none",
             }}
@@ -673,8 +674,8 @@ function FounderCTA() {
       ref={ref}
       className="mt-12 bento-card p-8 flex flex-col md:flex-row items-center justify-between gap-6"
       style={{
-        background: "linear-gradient(135deg,#161616 0%,#1a1208 100%)",
-        border: "1px solid rgba(255,107,43,0.22)",
+        background: "var(--card)",
+        border: "1px solid rgba(0,0,0,0.1)",
         opacity: inView ? 1 : 0,
         transform: inView ? "translateY(0)" : "translateY(24px)",
         transition: "opacity 0.6s ease 200ms, transform 0.6s ease 200ms",

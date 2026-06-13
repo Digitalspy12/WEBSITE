@@ -4,34 +4,62 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Agency dark theme — always dark */
-  --background: #0a0a0a;
-  --foreground: #f0ede8;
-  --card: #111111;
-  --card-foreground: #f0ede8;
-  --popover: #111111;
-  --popover-foreground: #f0ede8;
-  --primary: #ff6b2b;
-  --primary-foreground: #0a0a0a;
-  --secondary: #1a1a1a;
-  --secondary-foreground: #f0ede8;
-  --muted: #1a1a1a;
+  /* Agency light theme */
+  --background: #ffffff;
+  --foreground: #000000;
+  --card: #ffffff;
+  --card-foreground: #000000;
+  --popover: #ffffff;
+  --popover-foreground: #000000;
+  --primary: #000000;
+  --primary-foreground: #ffffff;
+  --secondary: #f0f0f0;
+  --secondary-foreground: #000000;
+  --muted: #f0f0f0;
   --muted-foreground: #6b6b6b;
-  --accent: #ff6b2b;
-  --accent-foreground: #0a0a0a;
+  --accent: #000000;
+  --accent-foreground: #ffffff;
   --destructive: #ef4444;
-  --destructive-foreground: #f0ede8;
-  --border: #222222;
-  --input: #1a1a1a;
-  --ring: #ff6b2b;
+  --destructive-foreground: #ffffff;
+  --border: #e5e5e5;
+  --input: #f0f0f0;
+  --ring: #000000;
   --radius: 0.75rem;
 
   /* Custom tokens */
-  --glow-orange: rgba(255, 107, 43, 0.15);
-  --glow-orange-strong: rgba(255, 107, 43, 0.3);
+  --glow-orange: rgba(0, 0, 0, 0.05);
+  --glow-orange-strong: rgba(0, 0, 0, 0.1);
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-border: rgba(0, 0, 0, 0.1);
+}
+
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ffffff;
+  --card: #111111;
+  --card-foreground: #ffffff;
+  --popover: #0a0a0a;
+  --popover-foreground: #ffffff;
+  --primary: #ffffff;
+  --primary-foreground: #000000;
+  --secondary: #1a1a1a;
+  --secondary-foreground: #ffffff;
+  --muted: #1a1a1a;
+  --muted-foreground: #a3a3a3;
+  --accent: #ffffff;
+  --accent-foreground: #000000;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #262626;
+  --input: #1a1a1a;
+  --ring: #ffffff;
+
+  --glow-orange: rgba(255, 255, 255, 0.05);
+  --glow-orange-strong: rgba(255, 255, 255, 0.1);
   --surface: #111111;
-  --surface-raised: #161616;
-  --surface-border: rgba(255, 255, 255, 0.06);
+  --surface-raised: #1a1a1a;
+  --surface-border: rgba(255, 255, 255, 0.1);
 }
 
 @theme inline {
@@ -108,13 +136,13 @@
 }
 
 .bento-card:hover {
-  border-color: rgba(255, 107, 43, 0.25);
+  border-color: rgba(0, 0, 0, 0.2);
   box-shadow: 0 0 40px var(--glow-orange);
 }
 
 /* Orange glow text */
 .glow-text {
-  text-shadow: 0 0 40px rgba(255, 107, 43, 0.4);
+  text-shadow: 0 0 40px rgba(0, 0, 0, 0.15);
 }
 
 /* Ticker marquee */

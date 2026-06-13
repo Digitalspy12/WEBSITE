@@ -282,8 +282,8 @@ function CtaRow() {
       ref={ref}
       className="bento-card p-8 md:p-10 flex flex-col md:flex-row items-center justify-between gap-6"
       style={{
-        background: "linear-gradient(135deg, #161616 0%, #1a1208 100%)",
-        border: "1px solid rgba(255,107,43,0.2)",
+        background: "var(--card)",
+        border: "1px solid rgba(0,0,0,0.1)",
         opacity: inView ? 1 : 0,
         transform: inView ? "translateY(0)" : "translateY(20px)",
         transition: "opacity 0.6s ease, transform 0.6s ease",

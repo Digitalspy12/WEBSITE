@@ -67,7 +67,7 @@ export async function updateSiteContent(key: string, value: any) {
  * Does NOT require authentication — public visitors can submit.
  * The leads table has a public INSERT RLS policy.
  */
-export async function submitLead(email: string) {
+export async function submitLead(email: string, name: string = '', phone: string = '') {
   try {
     const trimmed = (email || '').trim().toLowerCase()
 
@@ -88,7 +88,7 @@ export async function submitLead(email: string) {
 
     const { error } = await supabase
       .from('leads')
-      .insert({ email: trimmed })
+      .insert({ email: trimmed, name, phone })
 
     if (error) {
       console.error('Failed to insert lead:', error)
