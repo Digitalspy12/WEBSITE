@@ -11,8 +11,11 @@ import { ContactFooter } from "@/components/contact-footer"
 
 import { getCachedSiteContent } from "@/lib/supabase/content"
 
-// Force next.js to dynamic rendering to support cookie middleware session routing properly
-export const dynamic = 'force-dynamic'
+// ISR: Regenerate static HTML every 1 hour (3600s).
+// Serves cached pages instantly. If Supabase is down during regeneration,
+// stale-while-revalidate serves the last good version automatically.
+// Admin saves trigger revalidateTag('site-content') for instant refresh.
+export const revalidate = 3600
 
 export default async function Home() {
   // Fetch entire Supabase site content in a single fast, cached server database round-trip

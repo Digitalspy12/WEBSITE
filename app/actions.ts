@@ -2,16 +2,19 @@
 
 import { revalidateTag } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { logAudit } from '@/lib/audit'
+import { logger } from '@/lib/logger'
 
 /**
  * Server Action: Updates a content record in the Supabase site_content table
  * and purges the Next.js cache so updates are instantly reflected on the front page.
+ * Protected: requires admin role.
  */
 export async function updateSiteContent(key: string, value: any) {
   try {
     const supabase = await createClient()
 
-    // 1. Authenticate user request inside the Server Action
+    // 1. Authenticate + verify admin role
     const {
       data: { user },
       error: authError,
@@ -21,6 +24,10 @@ export async function updateSiteContent(key: string, value: any) {
       throw new Error('Unauthorized. You must be logged in as an administrator to change site content.')
     }
 
+    if (user.app_metadata?.role !== 'admin') {
+      throw new Error('Forbidden. Admin role required.')
+    }
+
     // 2. Perform database update
     const { error: updateError } = await supabase
       .from('site_content')
@@ -28,16 +35,29 @@ export async function updateSiteContent(key: string, value: any) {
       .eq('key', key)
 
     if (updateError) {
-      console.error(`Database update failed for key "${key}":`, updateError)
+      await logger.error('server-action/updateSiteContent', `Database update failed for key "${key}"`, {
+        key,
+        error: updateError.message,
+      })
       return { success: false, error: updateError.message }
     }
 
     // 3. Purge Next.js data cache tag instantly
     ;(revalidateTag as any)('site-content')
 
+    // 4. Audit trail
+    await logAudit({
+      userId: user.id,
+      userEmail: user.email || 'unknown',
+      action: 'content_update',
+      target: `site_content:${key}`,
+    })
+
     return { success: true }
   } catch (e: any) {
-    console.error('Server Action Error in updateSiteContent:', e)
+    await logger.error('server-action/updateSiteContent', e.message || 'Unexpected error', {
+      stack: e.stack,
+    })
     return { success: false, error: e.message || 'An unexpected server error occurred.' }
   }
 }
@@ -84,7 +104,7 @@ export async function submitLead(email: string) {
 
 /**
  * Server Action: Updates a lead's status (e.g., new → contacted → archived).
- * Requires authentication.
+ * Protected: requires admin role.
  */
 export async function updateLeadStatus(id: number, status: string) {
   try {
@@ -99,26 +119,43 @@ export async function updateLeadStatus(id: number, status: string) {
       throw new Error('Unauthorized.')
     }
 
+    if (user.app_metadata?.role !== 'admin') {
+      throw new Error('Forbidden. Admin role required.')
+    }
+
     const { error } = await supabase
       .from('leads')
       .update({ status })
       .eq('id', id)
 
     if (error) {
-      console.error('Failed to update lead status:', error)
+      await logger.error('server-action/updateLeadStatus', `Failed to update lead ${id}`, {
+        leadId: id,
+        status,
+        error: error.message,
+      })
       return { success: false, error: error.message }
     }
 
+    // Audit trail
+    await logAudit({
+      userId: user.id,
+      userEmail: user.email || 'unknown',
+      action: 'lead_status_change',
+      target: `lead:${id}`,
+      details: { newStatus: status },
+    })
+
     return { success: true }
   } catch (e: any) {
-    console.error('Server Action Error in updateLeadStatus:', e)
+    await logger.error('server-action/updateLeadStatus', e.message || 'Unexpected error')
     return { success: false, error: e.message || 'Failed to update lead.' }
   }
 }
 
 /**
  * Server Action: Deletes a lead record permanently.
- * Requires authentication.
+ * Protected: requires admin role.
  */
 export async function deleteLead(id: number) {
   try {
@@ -133,20 +170,34 @@ export async function deleteLead(id: number) {
       throw new Error('Unauthorized.')
     }
 
+    if (user.app_metadata?.role !== 'admin') {
+      throw new Error('Forbidden. Admin role required.')
+    }
+
     const { error } = await supabase
       .from('leads')
       .delete()
       .eq('id', id)
 
     if (error) {
-      console.error('Failed to delete lead:', error)
+      await logger.error('server-action/deleteLead', `Failed to delete lead ${id}`, {
+        leadId: id,
+        error: error.message,
+      })
       return { success: false, error: error.message }
     }
 
+    // Audit trail
+    await logAudit({
+      userId: user.id,
+      userEmail: user.email || 'unknown',
+      action: 'lead_delete',
+      target: `lead:${id}`,
+    })
+
     return { success: true }
   } catch (e: any) {
-    console.error('Server Action Error in deleteLead:', e)
+    await logger.error('server-action/deleteLead', e.message || 'Unexpected error')
     return { success: false, error: e.message || 'Failed to delete lead.' }
   }
 }
-

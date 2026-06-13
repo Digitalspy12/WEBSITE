@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { trackLoginAttempt } from '@/app/actions-auth'
 import { ArrowRight, Lock, Mail, ShieldAlert } from 'lucide-react'
 
 export default function LoginPage() {
@@ -30,7 +31,19 @@ export default function LoginPage() {
       if (error) {
         setErrorMsg(error.message)
         setLoading(false)
+        await trackLoginAttempt(email, false, error.message)
       } else {
+        const role = data.user?.app_metadata?.role
+        if (role !== 'admin') {
+          // User authenticated but is not an admin
+          await supabase.auth.signOut()
+          setErrorMsg('Access Denied. Your account does not have administrator privileges. Please update your role to "admin" in the Supabase Dashboard.')
+          setLoading(false)
+          await trackLoginAttempt(email, false, 'User lacks admin role')
+          return
+        }
+
+        await trackLoginAttempt(email, true)
         router.refresh()
         // Delay slightly for cookies to settle before client-side redirecting
         setTimeout(() => {
@@ -40,6 +53,7 @@ export default function LoginPage() {
     } catch (err: any) {
       setErrorMsg(err.message || 'An unexpected error occurred during sign-in.')
       setLoading(false)
+      await trackLoginAttempt(email, false, err.message)
     }
   }
 

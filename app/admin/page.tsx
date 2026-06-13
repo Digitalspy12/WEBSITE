@@ -1,1348 +1,427 @@
 'use client'
 
-export const dynamic = 'force-dynamic'
-
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
-import { updateSiteContent, updateLeadStatus, deleteLead } from '@/app/actions'
+import { useState, useEffect, useCallback } from 'react'
 import {
-  LogOut,
-  Save,
-  Upload,
-  Plus,
-  Trash2,
-  Layout,
-  Rocket,
-  FolderGit2,
-  Mail,
-  CheckCircle,
-  AlertCircle,
-  Loader2,
-  Cpu,
-  MessageSquare,
-  Inbox,
-  ArrowRight,
+  Activity,
+  Database,
+  Shield,
+  Wifi,
+  WifiOff,
   Clock,
-  CheckCheck,
-  Archive,
   RefreshCw,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  Loader2,
+  Zap,
+  FileText,
 } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 
-const TABS = [
-  { id: 'leads', label: 'Project Leads', Icon: Inbox },
-  { id: 'navbar', label: 'Navbar & Brand', Icon: Layout },
-  { id: 'hero', label: 'Hero Section', Icon: Rocket },
-  { id: 'testimonials', label: 'Testimonials', Icon: MessageSquare },
-  { id: 'services', label: 'Services Catalog', Icon: Cpu },
-  { id: 'projects', label: 'Projects Showcase', Icon: FolderGit2 },
-  { id: 'footer', label: 'Contact & Footer', Icon: Mail },
-]
+interface HealthStatus {
+  status: 'ok' | 'degraded' | 'down' | 'loading'
+  supabase: string
+  latencyMs: number
+  timestamp: string
+  error?: string
+}
 
-export default function AdminPage() {
-  const router = useRouter()
-  const supabase = createClient()
+interface ContentFreshness {
+  lastUpdated: string | null
+  totalKeys: number
+}
 
-  // State management
-  const [activeTab, setActiveTab] = useState('leads')
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState<string | null>(null)
-  const [content, setContent] = useState<any[]>([])
-  const [status, setStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
-  const [uploadingImage, setUploadingImage] = useState<string | null>(null)
+export default function SystemHealthPage() {
+  const [health, setHealth] = useState<HealthStatus>({
+    status: 'loading',
+    supabase: 'checking...',
+    latencyMs: 0,
+    timestamp: new Date().toISOString(),
+  })
+  const [authStatus, setAuthStatus] = useState<'ok' | 'error' | 'loading'>('loading')
+  const [contentFreshness, setContentFreshness] = useState<ContentFreshness>({ lastUpdated: null, totalKeys: 0 })
+  const [recentErrors, setRecentErrors] = useState<number>(0)
+  const [refreshing, setRefreshing] = useState(false)
+  const [lastCheck, setLastCheck] = useState<Date | null>(null)
 
-  // Leads state
-  const [leads, setLeads] = useState<any[]>([])
-  const [leadsLoading, setLeadsLoading] = useState(false)
-  const [leadsFilter, setLeadsFilter] = useState<'all' | 'new' | 'contacted' | 'archived'>('all')
-
-  // Fetch all site content records
-  const fetchContent = async () => {
-    setLoading(true)
+  const checkHealth = useCallback(async () => {
+    setRefreshing(true)
     try {
-      const { data, error } = await supabase
-        .from('site_content')
-        .select('*')
-        .order('key', { ascending: true })
-
-      if (error) throw error
-
-      // Auto-seed missing keys for testimonials
-      const requiredKeys = ['testimonials.section_badge', 'testimonials.title_lead', 'testimonials.list']
-      const existingKeys = data ? data.map((item: any) => item.key) : []
-      const missingKeys = requiredKeys.filter(k => !existingKeys.includes(k))
-
-      if (missingKeys.length > 0) {
-        console.log('Seeding missing testimonials keys on admin load...', missingKeys)
-        const seedData = [
-          {
-            key: 'testimonials.section_badge',
-            value: 'Reviews',
-            type: 'text',
-            label: 'Testimonials Section Badge',
-            description: 'Small pill tag above section title'
-          },
-          {
-            key: 'testimonials.title_lead',
-            value: 'Customer Reviews',
-            type: 'text',
-            label: 'Testimonials Section Title',
-            description: 'Main title for Customer Reviews'
-          },
-          {
-            key: 'testimonials.list',
-            value: [
-              {
-                id: 1,
-                name: 'Edward Alexander',
-                avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150&h=150&fit=crop',
-                rating: 4.9,
-                date: '29 Aug, 2017',
-                text: 'The entire process was seamless. They understood my technical requirements instantly and built a custom dashboard in 4 weeks. Their code ownership model gives me total peace of mind.'
-              },
-              {
-                id: 2,
-                name: 'Diana Johnston',
-                avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&h=150&fit=crop',
-                rating: 4.9,
-                date: '29 Aug, 2017',
-                text: 'Overall pleasurable experience.Pay a little first and Pay a little during the development of the app as milestones are achieved, which made me feel very confident and comfortable.Seamless and Easy process.'
-              },
-              {
-                id: 3,
-                name: 'Lauren Contreras',
-                avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150&h=150&fit=crop',
-                rating: 4.9,
-                date: '29 Aug, 2017',
-                text: 'I was skeptical about a \'done-for-you\' tech agency, but AK 0121 exceeded all expectations. They built our automated supply chain dashboard in record time. Absolute senior engineering caliber.'
-              }
-            ],
-            type: 'list',
-            label: 'Testimonials Reviews List',
-            description: 'Reviews data containing avatar, name, rating, date, and review text.'
-          }
-        ]
-
-        const toInsert = seedData.filter(item => missingKeys.includes(item.key))
-
-        const { error: insertError } = await supabase
-          .from('site_content')
-          .insert(toInsert)
-
-        if (insertError) {
-          console.error('Failed to auto-seed testimonials keys:', insertError)
-        } else {
-          // Refetch to get the newly inserted records
-          const { data: refetchedData, error: refetchError } = await supabase
-            .from('site_content')
-            .select('*')
-            .order('key', { ascending: true })
-          if (!refetchError && refetchedData) {
-            setContent(refetchedData)
-            return
-          }
-        }
-      }
-
-      setContent(data || [])
-    } catch (e: any) {
-      showStatus('error', e.message || 'Failed to fetch content data.')
-    } finally {
-      setLoading(false)
+      const start = Date.now()
+      const res = await fetch('/api/health')
+      const data = await res.json()
+      setHealth({
+        ...data,
+        latencyMs: data.latencyMs || (Date.now() - start),
+      })
+    } catch {
+      setHealth({
+        status: 'down',
+        supabase: 'unreachable',
+        latencyMs: 0,
+        timestamp: new Date().toISOString(),
+        error: 'Failed to reach health endpoint',
+      })
     }
-  }
-
-  // Fetch all leads from the leads table
-  const fetchLeads = async () => {
-    setLeadsLoading(true)
-    try {
-      const { data, error } = await supabase
-        .from('leads')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-      setLeads(data || [])
-    } catch (e: any) {
-      showStatus('error', e.message || 'Failed to fetch leads.')
-    } finally {
-      setLeadsLoading(false)
-    }
-  }
-
-  // Handle lead status change
-  const handleLeadStatusChange = async (id: number, newStatus: string) => {
-    setSaving(`lead-${id}`)
-    try {
-      const res = await updateLeadStatus(id, newStatus)
-      if (res.success) {
-        setLeads(prev => prev.map(l => l.id === id ? { ...l, status: newStatus } : l))
-        showStatus('success', `Lead status updated to "${newStatus}".`)
-      } else {
-        throw new Error(res.error)
-      }
-    } catch (e: any) {
-      showStatus('error', e.message || 'Failed to update lead.')
-    } finally {
-      setSaving(null)
-    }
-  }
-
-  // Handle lead deletion
-  const handleDeleteLead = async (id: number) => {
-    setSaving(`lead-${id}`)
-    try {
-      const res = await deleteLead(id)
-      if (res.success) {
-        setLeads(prev => prev.filter(l => l.id !== id))
-        showStatus('success', 'Lead deleted successfully.')
-      } else {
-        throw new Error(res.error)
-      }
-    } catch (e: any) {
-      showStatus('error', e.message || 'Failed to delete lead.')
-    } finally {
-      setSaving(null)
-    }
-  }
-
-  useEffect(() => {
-    fetchContent()
-    fetchLeads()
+    setLastCheck(new Date())
+    setRefreshing(false)
   }, [])
 
-  // Helper: Display floating status alerts
-  const showStatus = (type: 'success' | 'error', message: string) => {
-    setStatus({ type, message })
-    setTimeout(() => {
-      setStatus(null)
-    }, 4000)
-  }
-
-  // Handle Sign Out
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    router.push('/login')
-    router.refresh()
-  }
-
-  // Handle simple Key-Value Input update (local state state)
-  const handleLocalValueChange = (key: string, value: any) => {
-    setContent((prev) =>
-      prev.map((item) => (item.key === key ? { ...item, value } : item))
-    )
-  }
-
-  // Save specific record to Database via Server Action
-  const saveRecord = async (key: string, value: any) => {
-    setSaving(key)
+  const checkAuth = useCallback(async () => {
     try {
-      const res = await updateSiteContent(key, value)
-      if (res.success) {
-        showStatus('success', `"${key}" saved successfully! Landing page is updated.`)
-      } else {
-        throw new Error(res.error)
-      }
-    } catch (e: any) {
-      showStatus('error', e.message || `Failed to save "${key}".`)
-    } finally {
-      setSaving(null)
+      const supabase = createClient()
+      const { data: { user }, error } = await supabase.auth.getUser()
+      setAuthStatus(error || !user ? 'error' : 'ok')
+    } catch {
+      setAuthStatus('error')
     }
-  }
+  }, [])
 
-  // Upload Asset directly to Supabase Storage Bucket 'agency-assets'
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, key: string, targetIndex?: number) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    setUploadingImage(key + (targetIndex !== undefined ? `-${targetIndex}` : ''))
+  const checkContentFreshness = useCallback(async () => {
     try {
-      // 1. Create clean unique filename
-      const fileExt = file.name.split('.').pop()
-      const cleanName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
-      const filePath = `uploads/${cleanName}`
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('site_content')
+        .select('updated_at')
+        .order('updated_at', { ascending: false })
 
-      // 2. Upload file to Supabase Storage Bucket
-      const { data, error: uploadError } = await supabase.storage
-        .from('agency-assets')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: true,
+      if (!error && data) {
+        setContentFreshness({
+          lastUpdated: data[0]?.updated_at || null,
+          totalKeys: data.length,
         })
-
-      if (uploadError) throw uploadError
-
-      // 3. Get Public CDN URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('agency-assets')
-        .getPublicUrl(filePath)
-
-      // 4. Update state and save
-      if (targetIndex !== undefined) {
-        // We are updating an image inside an array of objects
-        const record = content.find((item) => item.key === key)
-        if (record) {
-          const list = [...record.value]
-          const fieldName = key === 'testimonials.list' ? 'avatar' : 'img'
-          list[targetIndex] = { ...list[targetIndex], [fieldName]: publicUrl }
-          handleLocalValueChange(key, list)
-          await saveRecord(key, list)
-        }
-      } else {
-        // Simple top-level key value update
-        handleLocalValueChange(key, publicUrl)
-        await saveRecord(key, publicUrl)
       }
+    } catch {
+      // Silently fail — not critical
+    }
+  }, [])
 
-      showStatus('success', 'Image uploaded and linked successfully!')
-    } catch (e: any) {
-      console.error(e)
-      showStatus('error', e.message || 'Image upload failed. Double-check bucket policies.')
-    } finally {
-      setUploadingImage(null)
+  const checkRecentErrors = useCallback(async () => {
+    try {
+      const supabase = createClient()
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+      const { count } = await supabase
+        .from('app_logs')
+        .select('*', { count: 'exact', head: true })
+        .gte('timestamp', since)
+        .in('level', ['error', 'critical'])
+
+      setRecentErrors(count || 0)
+    } catch {
+      // Table may not exist yet — silently fail
+    }
+  }, [])
+
+  const runAllChecks = useCallback(async () => {
+    await Promise.all([
+      checkHealth(),
+      checkAuth(),
+      checkContentFreshness(),
+      checkRecentErrors(),
+    ])
+  }, [checkHealth, checkAuth, checkContentFreshness, checkRecentErrors])
+
+  useEffect(() => {
+    runAllChecks()
+    const interval = setInterval(runAllChecks, 60000) // Refresh every 60s
+    return () => clearInterval(interval)
+  }, [runAllChecks])
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'ok': return { bg: 'rgba(74,222,128,0.08)', border: 'rgba(74,222,128,0.2)', text: '#4ade80', glow: 'rgba(74,222,128,0.15)' }
+      case 'degraded': return { bg: 'rgba(251,191,36,0.08)', border: 'rgba(251,191,36,0.2)', text: '#fbbf24', glow: 'rgba(251,191,36,0.15)' }
+      case 'loading': return { bg: 'rgba(148,163,184,0.08)', border: 'rgba(148,163,184,0.2)', text: '#94a3b8', glow: 'rgba(148,163,184,0.1)' }
+      default: return { bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.2)', text: '#ef4444', glow: 'rgba(239,68,68,0.15)' }
     }
   }
 
-  // Helpers for Lists & Arrays editing (e.g. tags cloud or words animation)
-  const addArrayItem = (key: string, placeholder: string = 'New Item') => {
-    const record = content.find((item) => item.key === key)
-    if (record) {
-      const currentList = Array.isArray(record.value) ? record.value : []
-      const updatedList = [...currentList, placeholder]
-      handleLocalValueChange(key, updatedList)
-    }
+  const formatRelativeTime = (dateStr: string | null) => {
+    if (!dateStr) return 'Never'
+    const diff = Date.now() - new Date(dateStr).getTime()
+    const mins = Math.floor(diff / 60000)
+    if (mins < 1) return 'Just now'
+    if (mins < 60) return `${mins}m ago`
+    const hrs = Math.floor(mins / 60)
+    if (hrs < 24) return `${hrs}h ago`
+    return `${Math.floor(hrs / 24)}d ago`
   }
 
-  const removeArrayItem = (key: string, index: number) => {
-    const record = content.find((item) => item.key === key)
-    if (record) {
-      const updatedList = [...record.value]
-      updatedList.splice(index, 1)
-      handleLocalValueChange(key, updatedList)
-    }
-  }
+  const overallStatus = health.status === "loading" || authStatus === "loading" ? "loading" : health.status === "ok" && authStatus === "ok"
+    ? 'ok'
+    : health.status === 'down' || authStatus === 'error'
+      ? 'down'
+      : 'degraded'
 
-  const updateArrayItem = (key: string, index: number, val: string) => {
-    const record = content.find((item) => item.key === key)
-    if (record) {
-      const updatedList = [...record.value]
-      updatedList[index] = val
-      handleLocalValueChange(key, updatedList)
-    }
-  }
-
-  // Helpers for Projects List management
-  const addProject = () => {
-    const key = 'projects.list'
-    const record = content.find((item) => item.key === key)
-    if (record) {
-      const updatedList = [
-        ...record.value,
-        {
-          id: Date.now(),
-          img: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=600',
-          title: 'New Agency Project',
-          category: 'SaaS',
-          tag: '100% Shipped',
-          tagColor: '#ff6b2b',
-          tagBg: 'rgba(255,107,43,0.12)',
-          stat: 'Built in 4 weeks',
-          year: '2026',
-          desc: 'Brief description explaining what you built, how long it took, and what impact it delivered.',
-        },
-      ]
-      handleLocalValueChange(key, updatedList)
-    }
-  }
-
-  const removeProject = (index: number) => {
-    const key = 'projects.list'
-    const record = content.find((item) => item.key === key)
-    if (record) {
-      const updatedList = [...record.value]
-      updatedList.splice(index, 1)
-      handleLocalValueChange(key, updatedList)
-    }
-  }
-
-  const updateProjectField = (index: number, field: string, value: any) => {
-    const key = 'projects.list'
-    const record = content.find((item) => item.key === key)
-    if (record) {
-      const updatedList = [...record.value]
-      updatedList[index] = { ...updatedList[index], [field]: value }
-      handleLocalValueChange(key, updatedList)
-    }
-  }
-
-  // Helpers for Testimonials List management
-  const addTestimonial = () => {
-    const key = 'testimonials.list'
-    const record = content.find((item) => item.key === key)
-    if (record) {
-      const updatedList = [
-        ...record.value,
-        {
-          id: Date.now(),
-          name: 'New Reviewer',
-          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&h=150&fit=crop',
-          rating: 4.9,
-          date: '29 Aug, 2017',
-          text: 'Overall pleasurable experience. Seamless and easy process.',
-        },
-      ]
-      handleLocalValueChange(key, updatedList)
-    }
-  }
-
-  const removeTestimonial = (index: number) => {
-    const key = 'testimonials.list'
-    const record = content.find((item) => item.key === key)
-    if (record) {
-      const updatedList = [...record.value]
-      updatedList.splice(index, 1)
-      handleLocalValueChange(key, updatedList)
-    }
-  }
-
-  const updateTestimonialField = (index: number, field: string, value: any) => {
-    const key = 'testimonials.list'
-    const record = content.find((item) => item.key === key)
-    if (record) {
-      const updatedList = [...record.value]
-      updatedList[index] = { ...updatedList[index], [field]: value }
-      handleLocalValueChange(key, updatedList)
-    }
-  }
-
-  // Filter keys by the active CMS tab
-  const getTabRecords = () => {
-    return content.filter((item) => item.key.startsWith(activeTab))
-  }
+  const sc = getStatusColor(overallStatus)
 
   return (
-    <main
-      className="min-h-screen relative overflow-hidden flex flex-col grain"
-      style={{ background: 'var(--background)' }}
-    >
-      {/* CMS Header */}
-      <header
-        className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-40 backdrop-blur-md"
-        style={{ borderColor: 'var(--border)', background: 'rgba(10,10,10,0.85)' }}
-      >
-        <div className="flex items-center gap-3">
-          <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black"
-            style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}
-          >
-            AK
-          </div>
-          <div>
-            <h1 className="font-bold text-sm" style={{ color: 'var(--foreground)' }}>
-              AK 0121 Agency CMS
-            </h1>
-            <p className="text-[10px]" style={{ color: 'var(--muted-foreground)' }}>
-              Supabase Powered Content Management Server
-            </p>
-          </div>
+    <div className="max-w-5xl mx-auto flex flex-col gap-6">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-bold flex items-center gap-2.5" style={{ color: 'var(--foreground)' }}>
+            <Activity size={20} style={{ color: 'var(--primary)' }} />
+            System Health
+          </h1>
+          <p className="text-xs mt-1" style={{ color: 'var(--muted-foreground)' }}>
+            Real-time status of all platform services. Auto-refreshes every 60 seconds.
+          </p>
         </div>
-
         <button
-          onClick={handleSignOut}
-          className="flex items-center gap-2 px-4 py-2 border rounded-full text-xs font-semibold cursor-pointer hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-500 transition-all duration-200"
+          onClick={runAllChecks}
+          disabled={refreshing}
+          className="flex items-center gap-2 px-4 py-2 border rounded-full text-xs font-semibold cursor-pointer hover:bg-white/5 transition-all disabled:opacity-50"
           style={{ borderColor: 'var(--border)', color: 'var(--muted-foreground)' }}
         >
-          <LogOut size={12} /> Sign Out
+          <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
+          Refresh All
         </button>
-      </header>
-
-      {/* Floating Status Indicator */}
-      {status && (
-        <div className="fixed bottom-6 right-6 z-50 animate-bounce flex items-center gap-2.5 px-5 py-3.5 rounded-xl border text-sm font-medium shadow-2xl"
-          style={{
-            background: status.type === 'success' ? 'rgba(74,222,128,0.1)' : 'rgba(239,68,68,0.1)',
-            borderColor: status.type === 'success' ? '#4ade8055' : '#ef444455',
-            color: status.type === 'success' ? '#4ade80' : '#ef4444',
-          }}
-        >
-          {status.type === 'success' ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
-          <span>{status.message}</span>
-        </div>
-      )}
-
-      {/* CMS Workspace Body */}
-      <div className="max-w-7xl w-full mx-auto p-6 flex flex-col md:flex-row gap-6 flex-1">
-        {/* Sidebar Nav */}
-        <aside className="w-full md:w-64 shrink-0 flex flex-col gap-2">
-          {TABS.map(({ id, label, Icon }) => (
-            <button
-              key={id}
-              onClick={() => setActiveTab(id)}
-              className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-xs font-semibold tracking-wide text-left cursor-pointer transition-all duration-200"
-              style={{
-                background: activeTab === id ? 'var(--secondary)' : 'transparent',
-                color: activeTab === id ? 'var(--foreground)' : 'var(--muted-foreground)',
-                border: activeTab === id ? '1px solid var(--border)' : '1px solid transparent',
-              }}
-            >
-              <Icon size={14} style={{ color: activeTab === id ? 'var(--primary)' : 'inherit' }} />
-              {label}
-            </button>
-          ))}
-        </aside>
-
-        {/* CMS Editor Window */}
-        <section className="flex-1 flex flex-col gap-6">
-          {loading ? (
-            <div className="flex-1 flex flex-col items-center justify-center gap-3 min-h-[300px]">
-              <Loader2 size={32} className="animate-spin" style={{ color: 'var(--primary)' }} />
-              <p className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
-                Loading CMS values from Supabase...
-              </p>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-6">
-              {/* ═══ LEADS PANEL ═══ */}
-              {activeTab === 'leads' && (
-                <div className="flex flex-col gap-6">
-                  {/* Leads Header */}
-                  <div className="p-6 rounded-2xl border flex flex-col gap-5"
-                    style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}
-                  >
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                      <div>
-                        <h2 className="text-lg font-bold flex items-center gap-2" style={{ color: 'var(--foreground)' }}>
-                          <Inbox size={18} style={{ color: 'var(--primary)' }} />
-                          Project Leads
-                        </h2>
-                        <p className="text-xs mt-1" style={{ color: 'var(--muted-foreground)' }}>
-                          Emails submitted via the "Start Project" contact form on your website.
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={fetchLeads}
-                          disabled={leadsLoading}
-                          className="flex items-center gap-1.5 px-3 py-2 border rounded-full text-xs font-semibold cursor-pointer hover:bg-white/5 transition-all disabled:opacity-50"
-                          style={{ borderColor: 'var(--border)', color: 'var(--muted-foreground)' }}
-                        >
-                          <RefreshCw size={12} className={leadsLoading ? 'animate-spin' : ''} />
-                          Refresh
-                        </button>
-                        <div
-                          className="px-3 py-2 rounded-full text-xs font-bold"
-                          style={{ background: 'rgba(255,107,43,0.12)', color: 'var(--primary)' }}
-                        >
-                          {leads.length} Total
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Filter Tabs */}
-                    <div className="flex flex-wrap gap-2 border-t pt-4" style={{ borderColor: 'var(--border)' }}>
-                      {(['all', 'new', 'contacted', 'archived'] as const).map(filter => {
-                        const count = filter === 'all' ? leads.length : leads.filter(l => l.status === filter).length
-                        return (
-                          <button
-                            key={filter}
-                            onClick={() => setLeadsFilter(filter)}
-                            className="px-3.5 py-1.5 rounded-full text-xs font-semibold cursor-pointer transition-all capitalize"
-                            style={{
-                              background: leadsFilter === filter ? 'var(--primary)' : 'rgba(255,255,255,0.04)',
-                              color: leadsFilter === filter ? 'var(--primary-foreground)' : 'var(--muted-foreground)',
-                              border: leadsFilter === filter ? '1px solid var(--primary)' : '1px solid var(--border)',
-                            }}
-                          >
-                            {filter} ({count})
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Leads List */}
-                  {leadsLoading ? (
-                    <div className="flex flex-col items-center justify-center gap-3 min-h-[200px]">
-                      <Loader2 size={28} className="animate-spin" style={{ color: 'var(--primary)' }} />
-                      <p className="text-xs" style={{ color: 'var(--muted-foreground)' }}>Loading leads...</p>
-                    </div>
-                  ) : leads.length === 0 ? (
-                    <div
-                      className="p-12 rounded-2xl border text-center flex flex-col items-center gap-4"
-                      style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}
-                    >
-                      <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(255,107,43,0.08)' }}>
-                        <Inbox size={28} style={{ color: 'var(--primary)', opacity: 0.6 }} />
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-bold" style={{ color: 'var(--foreground)' }}>No leads yet</h3>
-                        <p className="text-xs mt-1" style={{ color: 'var(--muted-foreground)' }}>
-                          When visitors submit their email on your website, they&apos;ll appear here.
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col gap-3">
-                      {leads
-                        .filter(l => leadsFilter === 'all' || l.status === leadsFilter)
-                        .map((lead) => {
-                          const statusColors: Record<string, { bg: string; border: string; text: string; icon: any }> = {
-                            new: { bg: 'rgba(56,189,248,0.08)', border: 'rgba(56,189,248,0.2)', text: '#38bdf8', icon: Clock },
-                            contacted: { bg: 'rgba(74,222,128,0.08)', border: 'rgba(74,222,128,0.2)', text: '#4ade80', icon: CheckCheck },
-                            archived: { bg: 'rgba(107,107,107,0.08)', border: 'rgba(107,107,107,0.2)', text: '#6b6b6b', icon: Archive },
-                          }
-                          const sc = statusColors[lead.status] || statusColors.new
-                          const StatusIcon = sc.icon
-                          const isProcessing = saving === `lead-${lead.id}`
-
-                          return (
-                            <div
-                              key={lead.id}
-                              className="p-5 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all hover:border-[rgba(255,107,43,0.15)]"
-                              style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}
-                            >
-                              {/* Lead Info */}
-                              <div className="flex items-center gap-4 min-w-0">
-                                <div
-                                  className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                                  style={{ background: 'rgba(255,107,43,0.08)' }}
-                                >
-                                  <Mail size={16} style={{ color: 'var(--primary)' }} />
-                                </div>
-                                <div className="min-w-0">
-                                  <p className="text-sm font-semibold truncate" style={{ color: 'var(--foreground)' }}>
-                                    {lead.email}
-                                  </p>
-                                  <p className="text-[10px] font-mono mt-0.5" style={{ color: 'var(--muted-foreground)' }}>
-                                    {new Date(lead.created_at).toLocaleDateString('en-US', {
-                                      weekday: 'short',
-                                      year: 'numeric',
-                                      month: 'short',
-                                      day: 'numeric',
-                                      hour: '2-digit',
-                                      minute: '2-digit',
-                                    })}
-                                  </p>
-                                </div>
-                              </div>
-
-                              {/* Status Badge + Actions */}
-                              <div className="flex items-center gap-2 shrink-0 flex-wrap">
-                                {/* Status Badge */}
-                                <span
-                                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider"
-                                  style={{ background: sc.bg, border: `1px solid ${sc.border}`, color: sc.text }}
-                                >
-                                  <StatusIcon size={10} />
-                                  {lead.status}
-                                </span>
-
-                                {/* Status Change Actions */}
-                                {lead.status !== 'contacted' && (
-                                  <button
-                                    onClick={() => handleLeadStatusChange(lead.id, 'contacted')}
-                                    disabled={isProcessing}
-                                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold cursor-pointer transition-all hover:bg-green-500/10 disabled:opacity-50"
-                                    style={{ border: '1px solid rgba(74,222,128,0.15)', color: '#4ade80' }}
-                                    title="Mark as Contacted"
-                                  >
-                                    {isProcessing ? <Loader2 size={10} className="animate-spin" /> : <CheckCheck size={10} />}
-                                    Contacted
-                                  </button>
-                                )}
-                                {lead.status !== 'archived' && (
-                                  <button
-                                    onClick={() => handleLeadStatusChange(lead.id, 'archived')}
-                                    disabled={isProcessing}
-                                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold cursor-pointer transition-all hover:bg-white/5 disabled:opacity-50"
-                                    style={{ border: '1px solid var(--border)', color: 'var(--muted-foreground)' }}
-                                    title="Archive Lead"
-                                  >
-                                    {isProcessing ? <Loader2 size={10} className="animate-spin" /> : <Archive size={10} />}
-                                    Archive
-                                  </button>
-                                )}
-                                {lead.status === 'archived' && (
-                                  <button
-                                    onClick={() => handleLeadStatusChange(lead.id, 'new')}
-                                    disabled={isProcessing}
-                                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold cursor-pointer transition-all hover:bg-blue-500/10 disabled:opacity-50"
-                                    style={{ border: '1px solid rgba(56,189,248,0.15)', color: '#38bdf8' }}
-                                    title="Restore Lead"
-                                  >
-                                    {isProcessing ? <Loader2 size={10} className="animate-spin" /> : <RefreshCw size={10} />}
-                                    Restore
-                                  </button>
-                                )}
-                                <button
-                                  onClick={() => handleDeleteLead(lead.id)}
-                                  disabled={isProcessing}
-                                  className="p-1.5 border border-red-500/20 text-red-500 rounded-lg bg-red-500/5 hover:bg-red-500/20 transition-all cursor-pointer disabled:opacity-50"
-                                  title="Delete permanently"
-                                >
-                                  {isProcessing ? <Loader2 size={10} className="animate-spin" /> : <Trash2 size={12} />}
-                                </button>
-                              </div>
-                            </div>
-                          )
-                        })}
-                      {leads.filter(l => leadsFilter === 'all' || l.status === leadsFilter).length === 0 && (
-                        <div
-                          className="p-8 rounded-xl border text-center"
-                          style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}
-                        >
-                          <p className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
-                            No leads with status &ldquo;{leadsFilter}&rdquo;.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* SPECIAL CASE: PROJECTS SHOWCASE CUSTOM LIST EDITOR */}
-              {activeTab === 'projects' && (
-                <div className="p-6 rounded-2xl border flex flex-col gap-6"
-                  style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}
-                >
-                  <div className="flex items-center justify-between border-b pb-4" style={{ borderColor: 'var(--border)' }}>
-                    <div>
-                      <h2 className="text-base font-bold" style={{ color: 'var(--foreground)' }}>
-                        Dynamic Projects Showcases
-                      </h2>
-                      <p className="text-xs mt-1" style={{ color: 'var(--muted-foreground)' }}>
-                        Manage individual cards inside the automatic scrolling infinite project gallery.
-                      </p>
-                    </div>
-                    <button
-                      onClick={addProject}
-                      className="flex items-center gap-1.5 px-4 py-2 bg-primary/10 border border-primary/20 rounded-full text-xs font-bold transition-all hover:bg-primary/20"
-                      style={{ color: 'var(--primary)' }}
-                    >
-                      <Plus size={12} /> Add Card
-                    </button>
-                  </div>
-
-                  {content.find((i) => i.key === 'projects.list')?.value.map((project: any, index: number) => (
-                    <div
-                      key={project.id || index}
-                      className="p-5 rounded-xl border flex flex-col lg:flex-row gap-5"
-                      style={{ background: 'var(--surface-raised)', borderColor: 'var(--border)' }}
-                    >
-                      {/* Project Image Handler */}
-                      <div className="w-full lg:w-48 flex flex-col gap-2">
-                        <div className="relative h-28 w-full rounded-lg overflow-hidden border" style={{ borderColor: 'var(--border)' }}>
-                          <img src={project.img} alt={project.title} className="object-cover w-full h-full" />
-                        </div>
-                        <label className="flex items-center justify-center gap-1.5 py-2 border rounded-lg text-[10px] font-mono font-bold cursor-pointer hover:bg-white/5 transition-all">
-                          {uploadingImage === `projects.list-${index}` ? (
-                            <Loader2 size={10} className="animate-spin" />
-                          ) : (
-                            <Upload size={10} />
-                          )}
-                          Change Photo
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(e) => handleImageUpload(e, 'projects.list', index)}
-                          />
-                        </label>
-                      </div>
-
-                      {/* Fields editor grid */}
-                      <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">Title</label>
-                          <input
-                            type="text"
-                            value={project.title}
-                            onChange={(e) => updateProjectField(index, 'title', e.target.value)}
-                            className="px-3.5 py-2 border rounded-lg text-xs outline-none bg-black/20"
-                            style={{ borderColor: 'var(--border)' }}
-                          />
-                        </div>
-
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">Category</label>
-                          <input
-                            type="text"
-                            value={project.category}
-                            onChange={(e) => updateProjectField(index, 'category', e.target.value)}
-                            className="px-3.5 py-2 border rounded-lg text-xs outline-none bg-black/20"
-                            style={{ borderColor: 'var(--border)' }}
-                          />
-                        </div>
-
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">Stat Tag (e.g. -60% response)</label>
-                          <input
-                            type="text"
-                            value={project.stat}
-                            onChange={(e) => updateProjectField(index, 'stat', e.target.value)}
-                            className="px-3.5 py-2 border rounded-lg text-xs outline-none bg-black/20"
-                            style={{ borderColor: 'var(--border)' }}
-                          />
-                        </div>
-
-                        <div className="flex flex-col gap-1 col-span-1 sm:col-span-2">
-                          <label className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">Description Box</label>
-                          <textarea
-                            value={project.desc}
-                            onChange={(e) => updateProjectField(index, 'desc', e.target.value)}
-                            rows={2}
-                            className="px-3.5 py-2 border rounded-lg text-xs outline-none bg-black/20 resize-none"
-                            style={{ borderColor: 'var(--border)' }}
-                          />
-                        </div>
-
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">Pill Badge Text</label>
-                          <input
-                            type="text"
-                            value={project.tag}
-                            onChange={(e) => updateProjectField(index, 'tag', e.target.value)}
-                            className="px-3.5 py-2 border rounded-lg text-xs outline-none bg-black/20"
-                            style={{ borderColor: 'var(--border)' }}
-                          />
-                        </div>
-
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">Completion Date (Year)</label>
-                          <input
-                            type="text"
-                            value={project.year}
-                            onChange={(e) => updateProjectField(index, 'year', e.target.value)}
-                            className="px-3.5 py-2 border rounded-lg text-xs outline-none bg-black/20"
-                            style={{ borderColor: 'var(--border)' }}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="flex lg:flex-col justify-end gap-2 shrink-0">
-                        <button
-                          onClick={() => removeProject(index)}
-                          className="p-2 border border-red-500/20 text-red-500 rounded-lg bg-red-500/5 hover:bg-red-500/20 transition-all cursor-pointer"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-
-                  <button
-                    onClick={() => saveRecord('projects.list', content.find((i) => i.key === 'projects.list')?.value)}
-                    disabled={saving === 'projects.list'}
-                    className="w-full py-3.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all disabled:opacity-50"
-                    style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}
-                  >
-                    {saving === 'projects.list' ? (
-                      <Loader2 size={14} className="animate-spin" />
-                    ) : (
-                      <Save size={14} />
-                    )}
-                    Save and Apply Projects Configuration
-                  </button>
-                </div>
-              )}
-
-              {/* SPECIAL CASE: TESTIMONIALS CUSTOM LIST EDITOR */}
-              {activeTab === 'testimonials' && (
-                <div className="p-6 rounded-2xl border flex flex-col gap-6"
-                  style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}
-                >
-                  <div className="flex items-center justify-between border-b pb-4" style={{ borderColor: 'var(--border)' }}>
-                    <div>
-                      <h2 className="text-base font-bold" style={{ color: 'var(--foreground)' }}>
-                        Customer Testimonials
-                      </h2>
-                      <p className="text-xs mt-1" style={{ color: 'var(--muted-foreground)' }}>
-                        Manage reviewer profiles, names, ratings, and quotes displayed on the homepage curved arc layout.
-                      </p>
-                    </div>
-                    <button
-                      onClick={addTestimonial}
-                      className="flex items-center gap-1.5 px-4 py-2 bg-primary/10 border border-primary/20 rounded-full text-xs font-bold transition-all hover:bg-primary/20"
-                      style={{ color: 'var(--primary)' }}
-                    >
-                      <Plus size={12} /> Add Review
-                    </button>
-                  </div>
-
-                  {content.find((i) => i.key === 'testimonials.list')?.value.map((testimonial: any, index: number) => (
-                    <div
-                      key={testimonial.id || index}
-                      className="p-5 rounded-xl border flex flex-col lg:flex-row gap-5"
-                      style={{ background: 'var(--surface-raised)', borderColor: 'var(--border)' }}
-                    >
-                      {/* Reviewer Avatar Image Handler */}
-                      <div className="w-full lg:w-48 flex flex-col gap-2">
-                        <div className="relative h-28 w-full rounded-lg overflow-hidden border bg-black/30" style={{ borderColor: 'var(--border)' }}>
-                          {testimonial.avatar ? (
-                            <img src={testimonial.avatar} alt={testimonial.name} className="object-cover w-full h-full" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">No Photo</div>
-                          )}
-                        </div>
-                        <label className="flex items-center justify-center gap-1.5 py-2 border rounded-lg text-[10px] font-mono font-bold cursor-pointer hover:bg-white/5 transition-all">
-                          {uploadingImage === `testimonials.list-${index}` ? (
-                            <Loader2 size={10} className="animate-spin" />
-                          ) : (
-                            <Upload size={10} />
-                          )}
-                          Change Photo
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(e) => handleImageUpload(e, 'testimonials.list', index)}
-                          />
-                        </label>
-                      </div>
-
-                      {/* Fields editor grid */}
-                      <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">Full Name</label>
-                          <input
-                            type="text"
-                            value={testimonial.name}
-                            onChange={(e) => updateTestimonialField(index, 'name', e.target.value)}
-                            className="px-3.5 py-2 border rounded-lg text-xs outline-none bg-black/20"
-                            style={{ borderColor: 'var(--border)' }}
-                          />
-                        </div>
-
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">Rating Star Score (e.g. 4.9)</label>
-                          <input
-                            type="number"
-                            step="0.1"
-                            min="0"
-                            max="5"
-                            value={testimonial.rating}
-                            onChange={(e) => updateTestimonialField(index, 'rating', parseFloat(e.target.value) || 0)}
-                            className="px-3.5 py-2 border rounded-lg text-xs outline-none bg-black/20"
-                            style={{ borderColor: 'var(--border)' }}
-                          />
-                        </div>
-
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">Review Date (e.g. 29 Aug, 2017)</label>
-                          <input
-                            type="text"
-                            value={testimonial.date}
-                            onChange={(e) => updateTestimonialField(index, 'date', e.target.value)}
-                            className="px-3.5 py-2 border rounded-lg text-xs outline-none bg-black/20"
-                            style={{ borderColor: 'var(--border)' }}
-                          />
-                        </div>
-
-                        <div className="flex flex-col gap-1 col-span-1 sm:col-span-2">
-                          <label className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">Review Text Box</label>
-                          <textarea
-                            value={testimonial.text}
-                            onChange={(e) => updateTestimonialField(index, 'text', e.target.value)}
-                            rows={3}
-                            className="px-3.5 py-2 border rounded-lg text-xs outline-none bg-black/20 resize-none"
-                            style={{ borderColor: 'var(--border)' }}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="flex lg:flex-col justify-end gap-2 shrink-0">
-                        <button
-                          onClick={() => removeTestimonial(index)}
-                          className="p-2 border border-red-500/20 text-red-500 rounded-lg bg-red-500/5 hover:bg-red-500/20 transition-all cursor-pointer"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-
-                  <button
-                    onClick={() => saveRecord('testimonials.list', content.find((i) => i.key === 'testimonials.list')?.value)}
-                    disabled={saving === 'testimonials.list'}
-                    className="w-full py-3.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all disabled:opacity-50"
-                    style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}
-                  >
-                    {saving === 'testimonials.list' ? (
-                      <Loader2 size={14} className="animate-spin" />
-                    ) : (
-                      <Save size={14} />
-                    )}
-                    Save and Apply Testimonials List
-                  </button>
-                </div>
-              )}
-
-              {/* STANDARD EDITABLE FIELDS FORM LIST */}
-              {getTabRecords()
-                .filter((r) => r.key !== 'projects.list' && r.key !== 'testimonials.list')
-                .map((record) => (
-                  <div
-                    key={record.key}
-                    className="p-6 rounded-2xl border flex flex-col gap-4"
-                    style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}
-                  >
-                    <div>
-                      <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-primary">
-                        {record.key}
-                      </span>
-                      <h3 className="text-sm font-bold mt-0.5" style={{ color: 'var(--foreground)' }}>
-                        {record.label}
-                      </h3>
-                      {record.description && (
-                        <p className="text-[11px]" style={{ color: 'var(--muted-foreground)' }}>
-                          {record.description}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="flex flex-col gap-3">
-                      {/* TYPE: TEXT */}
-                      {record.type === 'text' && (
-                        <input
-                          type="text"
-                          value={record.value}
-                          onChange={(e) => handleLocalValueChange(record.key, e.target.value)}
-                          className="px-4 py-3 border rounded-xl text-xs outline-none bg-black/20"
-                          style={{ borderColor: 'var(--border)' }}
-                        />
-                      )}
-
-                      {/* TYPE: TEXTAREA */}
-                      {record.type === 'textarea' && (
-                        <textarea
-                          value={record.value}
-                          onChange={(e) => handleLocalValueChange(record.key, e.target.value)}
-                          rows={4}
-                          className="px-4 py-3 border rounded-xl text-xs outline-none bg-black/20"
-                          style={{ borderColor: 'var(--border)' }}
-                        />
-                      )}
-
-                      {/* TYPE: LIST/ARRAY OF STRINGS OR OBJECTS */}
-                      {record.type === 'list' && Array.isArray(record.value) && (
-                        <div className="flex flex-col gap-2">
-                          {/* SPECIAL CASE: NAVBAR LINKS EDITOR */}
-                          {record.key === 'navbar.links' ? (
-                            <div className="flex flex-col gap-3">
-                              {record.value.map((item: any, idx: number) => (
-                                <div key={idx} className="flex gap-2 items-center p-3 rounded-lg border bg-black/20" style={{ borderColor: 'var(--border)' }}>
-                                  <div className="flex-1 grid grid-cols-2 gap-2">
-                                    <input
-                                      type="text"
-                                      placeholder="Label"
-                                      value={item.label || ''}
-                                      onChange={(e) => {
-                                        const list = [...record.value]
-                                        list[idx] = { ...list[idx], label: e.target.value }
-                                        handleLocalValueChange(record.key, list)
-                                      }}
-                                      className="px-3 py-1.5 border rounded-lg text-xs outline-none bg-black/30 text-white"
-                                      style={{ borderColor: 'var(--border)' }}
-                                    />
-                                    <input
-                                      type="text"
-                                      placeholder="Anchor Link (e.g. #work)"
-                                      value={item.href || ''}
-                                      onChange={(e) => {
-                                        const list = [...record.value]
-                                        list[idx] = { ...list[idx], href: e.target.value }
-                                        handleLocalValueChange(record.key, list)
-                                      }}
-                                      className="px-3 py-1.5 border rounded-lg text-xs outline-none bg-black/30 text-white"
-                                      style={{ borderColor: 'var(--border)' }}
-                                    />
-                                  </div>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      const list = [...record.value]
-                                      list.splice(idx, 1)
-                                      handleLocalValueChange(record.key, list)
-                                    }}
-                                    className="p-1.5 text-red-500 border border-red-500/20 rounded hover:bg-red-500/10 cursor-pointer"
-                                  >
-                                    <Trash2 size={12} />
-                                  </button>
-                                </div>
-                              ))}
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const list = [...record.value, { label: 'New Link', href: '#contact' }]
-                                  handleLocalValueChange(record.key, list)
-                                }}
-                                className="w-fit flex items-center gap-1 px-3 py-1.5 border border-dashed rounded-full text-[10px] font-mono cursor-pointer hover:bg-white/5"
-                                style={{ borderColor: 'var(--border)', color: 'var(--muted-foreground)' }}
-                              >
-                                <Plus size={10} /> Add Link
-                              </button>
-                            </div>
-                          ) : record.key === 'footer.social_urls' ? (
-                            /* SPECIAL CASE: FOOTER SOCIAL LINKS & EMAIL EDITOR */
-                            <div className="flex flex-col gap-3">
-                              {record.value.map((item: any, idx: number) => (
-                                <div key={idx} className="flex gap-2 items-center p-3 rounded-lg border bg-black/20" style={{ borderColor: 'var(--border)' }}>
-                                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2">
-                                    <input
-                                      type="text"
-                                      placeholder="Social / Contact Name"
-                                      value={item.label || ''}
-                                      onChange={(e) => {
-                                        const list = [...record.value]
-                                        list[idx] = { ...list[idx], label: e.target.value }
-                                        handleLocalValueChange(record.key, list)
-                                      }}
-                                      className="px-3 py-1.5 border rounded-lg text-xs outline-none bg-black/30 text-white"
-                                      style={{ borderColor: 'var(--border)' }}
-                                    />
-                                    <input
-                                      type="text"
-                                      placeholder="URL (e.g. mailto:hello@ak.com)"
-                                      value={item.href || ''}
-                                      onChange={(e) => {
-                                        const list = [...record.value]
-                                        list[idx] = { ...list[idx], href: e.target.value }
-                                        handleLocalValueChange(record.key, list)
-                                      }}
-                                      className="px-3 py-1.5 border rounded-lg text-xs outline-none bg-black/30 text-white"
-                                      style={{ borderColor: 'var(--border)' }}
-                                    />
-                                    <select
-                                      value={item.icon || 'Mail'}
-                                      onChange={(e) => {
-                                        const list = [...record.value]
-                                        list[idx] = { ...list[idx], icon: e.target.value }
-                                        handleLocalValueChange(record.key, list)
-                                      }}
-                                      className="px-3 py-1.5 border rounded-lg text-xs outline-none bg-black/30 text-white"
-                                      style={{ borderColor: 'var(--border)', background: 'var(--surface-raised)' }}
-                                    >
-                                      <option value="Twitter">Twitter Icon</option>
-                                      <option value="Github">GitHub Icon</option>
-                                      <option value="Linkedin">LinkedIn Icon</option>
-                                      <option value="Mail">Email Mail Icon</option>
-                                    </select>
-                                  </div>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      const list = [...record.value]
-                                      list.splice(idx, 1)
-                                      handleLocalValueChange(record.key, list)
-                                    }}
-                                    className="p-1.5 text-red-500 border border-red-500/20 rounded hover:bg-red-500/10 cursor-pointer"
-                                  >
-                                    <Trash2 size={12} />
-                                  </button>
-                                </div>
-                              ))}
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const list = [...record.value, { label: 'Contact Email', href: 'mailto:hello@ak0121.agency', icon: 'Mail' }]
-                                  handleLocalValueChange(record.key, list)
-                                }}
-                                className="w-fit flex items-center gap-1 px-3 py-1.5 border border-dashed rounded-full text-[10px] font-mono cursor-pointer hover:bg-white/5"
-                                style={{ borderColor: 'var(--border)', color: 'var(--muted-foreground)' }}
-                              >
-                                <Plus size={10} /> Add Account/Email
-                              </button>
-                            </div>
-                          ) : record.key === 'services.list' ? (
-                            /* SPECIAL CASE: SERVICES ROW EDITOR */
-                            <div className="flex flex-col gap-5 animate-fade-in">
-                              {record.value.map((svc: any, idx: number) => (
-                                <div key={idx} className="p-5 rounded-xl border flex flex-col gap-4 bg-black/20" style={{ borderColor: 'var(--border)' }}>
-                                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                                    <div className="flex flex-col gap-1 sm:col-span-1">
-                                      <label className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">Index / No.</label>
-                                      <input
-                                        type="text"
-                                        placeholder="01"
-                                        value={svc.number || ''}
-                                        onChange={(e) => {
-                                          const list = [...record.value]
-                                          list[idx] = { ...list[idx], number: e.target.value }
-                                          handleLocalValueChange(record.key, list)
-                                        }}
-                                        className="px-3 py-1.5 border rounded-lg text-xs outline-none bg-black/30 text-white"
-                                        style={{ borderColor: 'var(--border)' }}
-                                      />
-                                    </div>
-                                    <div className="flex flex-col gap-1 sm:col-span-3">
-                                      <label className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">Service Title</label>
-                                      <input
-                                        type="text"
-                                        placeholder="Custom Web Apps"
-                                        value={svc.title || ''}
-                                        onChange={(e) => {
-                                          const list = [...record.value]
-                                          list[idx] = { ...list[idx], title: e.target.value }
-                                          handleLocalValueChange(record.key, list)
-                                        }}
-                                        className="px-3 py-1.5 border rounded-lg text-xs outline-none bg-black/30 text-white"
-                                        style={{ borderColor: 'var(--border)' }}
-                                      />
-                                    </div>
-                                  </div>
-
-                                  <div className="flex flex-col gap-1">
-                                    <label className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">Description</label>
-                                    <textarea
-                                      rows={2}
-                                      placeholder="Brief service description..."
-                                      value={svc.desc || ''}
-                                      onChange={(e) => {
-                                        const list = [...record.value]
-                                        list[idx] = { ...list[idx], desc: e.target.value }
-                                        handleLocalValueChange(record.key, list)
-                                      }}
-                                      className="px-3 py-1.5 border rounded-lg text-xs outline-none bg-black/30 text-white resize-none"
-                                      style={{ borderColor: 'var(--border)' }}
-                                    />
-                                  </div>
-
-                                  <div className="flex flex-col gap-1">
-                                    <label className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">Technology Tags (Comma Separated)</label>
-                                    <input
-                                      type="text"
-                                      placeholder="Next.js, Node.js, PostgreSQL"
-                                      value={Array.isArray(svc.tags) ? svc.tags.join(', ') : svc.tags || ''}
-                                      onChange={(e) => {
-                                        const list = [...record.value]
-                                        list[idx] = { ...list[idx], tags: e.target.value.split(',').map((t: string) => t.trim()).filter(Boolean) }
-                                        handleLocalValueChange(record.key, list)
-                                      }}
-                                      className="px-3 py-1.5 border rounded-lg text-xs outline-none bg-black/30 text-white"
-                                      style={{ borderColor: 'var(--border)' }}
-                                    />
-                                  </div>
-
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      const list = [...record.value]
-                                      list.splice(idx, 1)
-                                      handleLocalValueChange(record.key, list)
-                                    }}
-                                    className="w-fit self-end px-3 py-1.5 text-xs text-red-500 border border-red-500/20 rounded hover:bg-red-500/10 cursor-pointer flex items-center gap-1"
-                                  >
-                                    <Trash2 size={12} /> Remove Row
-                                  </button>
-                                </div>
-                              ))}
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const list = [...record.value, { number: `0${record.value.length + 1}`, title: 'New Service Capability', desc: 'Detailed outcomes delivered.', tags: ['React', 'API'] }]
-                                  handleLocalValueChange(record.key, list)
-                                }}
-                                className="w-fit flex items-center gap-1 px-4 py-2 border border-dashed rounded-full text-xs font-mono cursor-pointer hover:bg-white/5"
-                                style={{ borderColor: 'var(--border)', color: 'var(--muted-foreground)' }}
-                              >
-                                <Plus size={12} /> Add Service Row
-                              </button>
-                            </div>
-                          ) : (
-                            /* DEFAULT FALLBACK: SIMPLE STRINGS TAGS EDITOR */
-                            <div className="flex flex-col gap-2">
-                              <div className="flex flex-wrap gap-2">
-                                {record.value.map((item: any, idx: number) => (
-                                  <div
-                                    key={idx}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[11px] font-medium animate-fade-in"
-                                    style={{
-                                      background: 'var(--surface-raised)',
-                                      borderColor: 'var(--border)',
-                                    }}
-                                  >
-                                    <input
-                                      type="text"
-                                      value={item || ''}
-                                      onChange={(e) => updateArrayItem(record.key, idx, e.target.value)}
-                                      className="outline-none bg-transparent w-28 text-center text-xs text-white"
-                                    />
-                                    <button
-                                      type="button"
-                                      onClick={() => removeArrayItem(record.key, idx)}
-                                      className="text-red-500 hover:text-red-700 font-bold ml-1 cursor-pointer"
-                                    >
-                                      ×
-                                    </button>
-                                  </div>
-                                ))}
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => addArrayItem(record.key, 'New Item')}
-                                className="w-fit flex items-center gap-1 px-3 py-1.5 border border-dashed rounded-full text-[10px] font-mono cursor-pointer hover:bg-white/5"
-                                style={{ borderColor: 'var(--border)', color: 'var(--muted-foreground)' }}
-                              >
-                                <Plus size={10} /> Add Keyword
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* TYPE: IMAGE URL UPLOADER */}
-                      {record.type === 'image' && (
-                        <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
-                          <div className="relative h-20 w-32 border rounded-xl overflow-hidden bg-black/30 shrink-0" style={{ borderColor: 'var(--border)' }}>
-                            <img src={record.value} alt={record.label} className="object-cover w-full h-full" />
-                          </div>
-                          <div className="flex-1 flex flex-col gap-2">
-                            <input
-                              type="text"
-                              value={record.value}
-                              onChange={(e) => handleLocalValueChange(record.key, e.target.value)}
-                              className="px-4 py-3 border rounded-xl text-xs outline-none bg-black/20 w-full"
-                              style={{ borderColor: 'var(--border)' }}
-                            />
-                            <label className="flex items-center justify-center gap-2 py-2.5 border rounded-xl text-xs font-mono font-bold cursor-pointer hover:bg-white/5 transition-all">
-                              {uploadingImage === record.key ? (
-                                <Loader2 size={12} className="animate-spin" />
-                              ) : (
-                                <Upload size={12} />
-                              )}
-                              Upload Photo to Bucket
-                              <input
-                                type="file"
-                                accept="image/*"
-                                className="hidden"
-                                onChange={(e) => handleImageUpload(e, record.key)}
-                              />
-                            </label>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <button
-                      onClick={() => saveRecord(record.key, record.value)}
-                      disabled={saving === record.key}
-                      className="w-fit px-6 py-2.5 rounded-full font-bold text-xs flex items-center gap-2 cursor-pointer transition-all self-end disabled:opacity-50"
-                      style={{ background: 'rgba(255,107,43,0.12)', border: '1px solid rgba(255,107,43,0.2)', color: 'var(--primary)' }}
-                    >
-                      {saving === record.key ? (
-                        <Loader2 size={12} className="animate-spin" />
-                      ) : (
-                        <Save size={12} />
-                      )}
-                      Save Item
-                    </button>
-                  </div>
-                ))}
-            </div>
-          )}
-        </section>
       </div>
-    </main>
+
+      {/* Overall Status Banner */}
+      <div
+        className="p-5 rounded-2xl border flex items-center gap-4"
+        style={{
+          background: sc.bg,
+          borderColor: sc.border,
+          boxShadow: `0 0 30px ${sc.glow}`,
+        }}
+      >
+        <div
+          className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+          style={{ background: sc.bg, border: `1px solid ${sc.border}` }}
+        >
+          {overallStatus === 'loading' ? (
+            <Loader2 size={24} className="animate-spin" style={{ color: sc.text }} />
+          ) : overallStatus === 'ok' ? (
+            <CheckCircle size={24} style={{ color: sc.text }} />
+          ) : overallStatus === 'degraded' ? (
+            <AlertTriangle size={24} style={{ color: sc.text }} />
+          ) : (
+            <XCircle size={24} style={{ color: sc.text }} />
+          )}
+        </div>
+        <div>
+          <h2 className="text-base font-bold" style={{ color: sc.text }}>
+            {overallStatus === 'loading' ? 'Checking...' :
+              overallStatus === 'ok' ? 'All Systems Operational' :
+                overallStatus === 'degraded' ? 'Partial Degradation Detected' :
+                  'System Down — Action Required'}
+          </h2>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--muted-foreground)' }}>
+            Last checked: {lastCheck ? lastCheck.toLocaleTimeString() : '...'}
+          </p>
+        </div>
+      </div>
+
+      {/* Service Status Cards Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Supabase Database */}
+        <StatusCard
+          icon={Database}
+          title="Supabase Database"
+          status={health.status === 'loading' ? 'loading' : health.status === 'ok' ? 'ok' : 'down'}
+          details={[
+            { label: 'Connection', value: health.supabase },
+            { label: 'Latency', value: health.status === 'loading' ? '...' : `${health.latencyMs}ms` },
+          ]}
+          error={health.error}
+        />
+
+        {/* Supabase Auth */}
+        <StatusCard
+          icon={Shield}
+          title="Supabase Auth"
+          status={authStatus}
+          details={[
+            { label: 'Session', value: authStatus === 'ok' ? 'Active' : authStatus === 'loading' ? 'Checking...' : 'Failed' },
+          ]}
+        />
+
+        {/* API Health */}
+        <StatusCard
+          icon={Wifi}
+          title="API Routes"
+          status={health.status === 'loading' ? 'loading' : health.status === 'ok' ? 'ok' : 'down'}
+          details={[
+            { label: 'Endpoint', value: '/api/health' },
+            { label: 'Response', value: health.status === 'loading' ? '...' : `${health.latencyMs}ms` },
+          ]}
+        />
+
+        {/* Content Freshness */}
+        <StatusCard
+          icon={FileText}
+          title="Content Freshness"
+          status={contentFreshness.totalKeys > 0 ? 'ok' : 'loading'}
+          details={[
+            { label: 'Last Update', value: formatRelativeTime(contentFreshness.lastUpdated) },
+            { label: 'Total Keys', value: contentFreshness.totalKeys.toString() },
+          ]}
+        />
+
+        {/* Errors (24h) */}
+        <StatusCard
+          icon={AlertTriangle}
+          title="Errors (24h)"
+          status={recentErrors === 0 ? 'ok' : recentErrors > 10 ? 'down' : 'degraded'}
+          details={[
+            { label: 'Error Count', value: recentErrors.toString() },
+            { label: 'Severity', value: recentErrors === 0 ? 'None' : recentErrors > 10 ? 'High' : 'Low' },
+          ]}
+        />
+
+        {/* ISR Cache */}
+        <StatusCard
+          icon={Zap}
+          title="ISR Cache"
+          status="ok"
+          details={[
+            { label: 'Strategy', value: 'revalidate: 3600' },
+            { label: 'Mode', value: 'Stale-While-Revalidate' },
+          ]}
+        />
+      </div>
+
+      {/* Quick Diagnostics */}
+      <div
+        className="p-5 rounded-2xl border"
+        style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}
+      >
+        <h3 className="text-sm font-bold mb-4 flex items-center gap-2" style={{ color: 'var(--foreground)' }}>
+          <Clock size={14} style={{ color: 'var(--primary)' }} />
+          Quick Diagnostics
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <DiagnosticItem
+            label="Homepage Rendering"
+            value="ISR (Static)"
+            ok
+          />
+          <DiagnosticItem
+            label="Image Source"
+            value="/public (Edge CDN)"
+            ok
+          />
+          <DiagnosticItem
+            label="DB Connection Mode"
+            value="Anon Key (Read)"
+            ok
+          />
+          <DiagnosticItem
+            label="Keep-Alive"
+            value="cron-job.org"
+            ok={health.status === 'ok'}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Sub-components ─────────────────────────────────────
+
+function StatusCard({
+  icon: Icon,
+  title,
+  status,
+  details,
+  error,
+}: {
+  icon: any
+  title: string
+  status: 'ok' | 'degraded' | 'down' | 'error' | 'loading'
+  details: { label: string; value: string }[]
+  error?: string
+}) {
+  const normalizedStatus = status === 'error' ? 'down' : status
+  const colors = {
+    ok: { dot: '#4ade80', bg: 'rgba(74,222,128,0.06)' },
+    degraded: { dot: '#fbbf24', bg: 'rgba(251,191,36,0.06)' },
+    down: { dot: '#ef4444', bg: 'rgba(239,68,68,0.06)' },
+    loading: { dot: '#94a3b8', bg: 'rgba(148,163,184,0.06)' },
+  }
+  const c = colors[normalizedStatus]
+
+  return (
+    <div
+      className="p-4 rounded-xl border flex flex-col gap-3 transition-all hover:border-[rgba(255,107,43,0.15)]"
+      style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div
+            className="w-8 h-8 rounded-lg flex items-center justify-center"
+            style={{ background: c.bg }}
+          >
+            <Icon size={14} style={{ color: c.dot }} />
+          </div>
+          <span className="text-xs font-bold" style={{ color: 'var(--foreground)' }}>
+            {title}
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          {normalizedStatus === 'loading' ? (
+            <Loader2 size={10} className="animate-spin" style={{ color: c.dot }} />
+          ) : (
+            <div
+              className="w-2 h-2 rounded-full"
+              style={{
+                background: c.dot,
+                boxShadow: `0 0 6px ${c.dot}`,
+              }}
+            />
+          )}
+          <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: c.dot }}>
+            {normalizedStatus === 'loading' ? 'Checking' :
+              normalizedStatus === 'ok' ? 'Online' :
+                normalizedStatus === 'degraded' ? 'Warning' : 'Offline'}
+          </span>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1.5 pt-2 border-t" style={{ borderColor: 'var(--border)' }}>
+        {details.map((d, i) => (
+          <div key={i} className="flex items-center justify-between">
+            <span className="text-[10px]" style={{ color: 'var(--muted-foreground)' }}>
+              {d.label}
+            </span>
+            <span className="text-[10px] font-mono font-semibold" style={{ color: 'var(--foreground)' }}>
+              {d.value}
+            </span>
+          </div>
+        ))}
+        {error && (
+          <p className="text-[10px] mt-1 p-2 rounded-lg" style={{ background: 'rgba(239,68,68,0.08)', color: '#ef4444' }}>
+            {error}
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function DiagnosticItem({ label, value, ok }: { label: string; value: string; ok?: boolean }) {
+  return (
+    <div
+      className="flex items-center justify-between p-3 rounded-lg border"
+      style={{ borderColor: 'var(--border)', background: 'rgba(255,255,255,0.02)' }}
+    >
+      <span className="text-[10px]" style={{ color: 'var(--muted-foreground)' }}>
+        {label}
+      </span>
+      <div className="flex items-center gap-1.5">
+        {ok !== undefined && (
+          <div
+            className="w-1.5 h-1.5 rounded-full"
+            style={{ background: ok ? '#4ade80' : '#ef4444' }}
+          />
+        )}
+        <span className="text-[10px] font-mono font-semibold" style={{ color: 'var(--foreground)' }}>
+          {value}
+        </span>
+      </div>
+    </div>
   )
 }
